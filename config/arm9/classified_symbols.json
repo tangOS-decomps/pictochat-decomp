@@ -2395,7 +2395,7 @@
     "name": "FUN_02329270",
     "module": "unk_autoload_0",
     "addr": 36868720,
-    "size": 44,
+    "size": "0x38",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },

@@ -299,7 +299,7 @@ name=FUN_02328ea8 module=unk_autoload_0 addr=0x02328ea8 size=0x26a
 name=FUN_02329124 module=unk_autoload_0 addr=0x02329124 size=0x20
 name=FUN_02329144 module=unk_autoload_0 addr=0x02329144 size=0xca
 name=FUN_02329228 module=unk_autoload_0 addr=0x02329228 size=0x48
-name=FUN_02329270 module=unk_autoload_0 addr=0x02329270 size=0x2c
+name=FUN_02329270 module=unk_autoload_0 addr=0x02329270 size=0x38
 name=FUN_023292a8 module=unk_autoload_0 addr=0x023292a8 size=0xa
 name=FUN_023292b8 module=unk_autoload_0 addr=0x023292b8 size=0x2c
 name=FUN_023292e4 module=unk_autoload_0 addr=0x023292e4 size=0x50
