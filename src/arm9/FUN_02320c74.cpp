@@ -1,0 +1,2 @@
+// decomp: module=unk_autoload_0 addr=0x02320c74 name=FUN_02320c74
+extern "C" { extern int G_02320c74[]; int *FUN_02320c74(void) { return G_02320c74; } }
