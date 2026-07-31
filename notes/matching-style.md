@@ -15,19 +15,34 @@ Nothing is "close enough." A function that's off by one instruction is not
 matched - keep iterating, or leave it unmatched and move on rather than
 committing a near-miss as if it were done.
 
+## File extensions and C++ reorganization
+
+All source files in `src/arm9/` and `src/arm7/` are `.cpp` files.
+PictoChat was originally written in C++. Put `//cpp` on the first line of
+every C++ source file. Functions with C linkage should be wrapped in `extern "C"`.
+
 ## One function per file
 
-`src/arm9/<name>.c` or `src/arm7/<name>.c`, named after the function's real
-symbol name if known, otherwise `func_<hex_address>.c` (matching the address
-in the module it lives in - see `notes/pictochat-layout.md` for which module
-is which). Small groups of tightly related functions (e.g. a getter/setter
-pair) in one file are fine; whole subsystems in one file are not.
+`src/arm9/<name>.cpp` or `src/arm7/<name>.cpp`, named after the function's real
+symbol name if known (e.g. `_ZN3IRQ10DisableAllEv.cpp`), otherwise `FUN_<hex_address>.cpp`.
+Small groups of tightly related functions (e.g. a getter/setter pair) in one file are fine;
+whole subsystems in one file are not.
+
+## C++ Demangling & Class Indexing Tools
+
+See `notes/cpp-naming-guide.md` for full details on Itanium C++ name mangling,
+constructor/destructor variants, thunk signatures, and tool usage:
+
+- `python tools/demangle.py <symbol>`: Demangle Itanium C++ names.
+- `python tools/cpp_index.py`: Class-level summary and progress tracking.
+- `python tools/cpp_rename.py`: Safely rename `FUN_ADDR.cpp` files to demangled symbol names.
+- `python tools/verify_mangled.py`: Batch verify C++ functions match byte-for-byte.
 
 ## Import knowledge, write code
 
 You may use publicly known symbol names, struct layouts, or field offsets
-(from community reverse-engineering of PictoChat/NitroSDK, if such exists) -
-but all C in `src/` must be written from scratch against this project's own
+(from community reverse-engineering of PictoChat/NitroSDK/TWL SDK) -
+but all code in `src/` must be written from scratch against this project's own
 extracted binary. Never paste source from another project.
 
 ## Workflow
@@ -35,17 +50,7 @@ extracted binary. Never paste source from another project.
 1. Pick an unmatched function. `python tools/disasm.py --module <mod> --addr
    0x... --length 0x...` to read it (or open it in Ghidra - see
    `notes/ghidra-setup.md`).
-2. Write C for it (scratch/draft is fine to start).
-3. `python tools/match.py --c yourfile.c --func name --addr 0x... --size 0x..
+2. Write C++ for it.
+3. `python tools/match.py --c yourfile.cpp --func name --addr 0x... --size 0x..
    --module <mod>` and iterate until every word matches.
 4. Move the finished file into `src/<cpu>/`.
-
-## Codegen habits worth knowing up front
-
-Not yet written for this compiler/title specifically - `sm64ds-decomp`'s
-`notes/mwccarm-codegen.md` and `notes/pret-idioms.md` are excellent reading
-for the same compiler family (struct copies, bitfield shifts, the
-register-allocation/materialization idioms mwccarm 1.x/2.x favor) even though
-they were written against a different game; worth skimming before writing
-much C here. Once this project accumulates its own hard-won codegen notes,
-they belong in a `notes/mwccarm-codegen.md` here too.

@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """Ninja Build File Generator for ndsDecomp.
 
-Scans src/arm9 and src/arm7 for matched C source files and creates build.ninja
-rules that compile them with mwccarm. This is a basic "does everything still
-compile" smoke test, not the verification step - actual byte-matching
-verification is tools/match.py, run per-function (see CONTRIBUTING.md).
+Scans src/arm9 and src/arm7 for matched C/C++ source files (.c and .cpp) and
+creates build.ninja rules that compile them with mwccarm. This is a basic
+"does everything still compile" smoke test - actual byte-matching verification
+is tools/match.py, run per-function (see CONTRIBUTING.md).
 """
 
 import os
 
-# See notes/setup-mwccarm.md: PictoChat is a DSi system title, so the real
-# candidate compiler versions are the dsi/ builds, not the NTR-era 1.2/2.0
-# line sm64ds-decomp used for Super Mario 64 DS. dsi/1.3 is a starting guess
-# (2009 copyright, fits a DSi launch-window title) - NOT yet a verified pin.
 MWCCARM_PATH = os.path.join("tools", "mwccarm", "dsi", "1.3", "mwccarm.exe")
 LICENSE_PATH = os.path.abspath(os.path.join("tools", "mwccarm", "license.dat"))
 
@@ -22,7 +18,7 @@ ninja_required_version = 1.3
 
 # Variables
 mwccarm = {MWCCARM_PATH}
-cflags_common = -O4,p -enum int -lang c99 -char signed -interworking -gccext,on -msgstyle gcc -Iinclude
+cflags_common = -O4,p -enum int -lang c++ -char signed -interworking -gccext,on -msgstyle gcc -Iinclude
 cflags_arm9 = $cflags_common -proc arm946e
 cflags_arm7 = $cflags_common -proc arm7tdmi
 
@@ -54,7 +50,7 @@ def scan_sources(src_dir):
         return sources
     for root, _, files in os.walk(src_dir):
         for f in files:
-            if f.endswith(".c"):
+            if f.endswith(".c") or f.endswith(".cpp"):
                 sources.append(os.path.join(root, f))
     return sources
 
@@ -68,11 +64,13 @@ def main():
     ninja_body = [NINJA_HEADER]
 
     for src in arm9_sources:
-        rel_obj = os.path.join("build", "arm9", os.path.basename(src).replace(".c", ".o"))
+        ext = ".cpp" if src.endswith(".cpp") else ".c"
+        rel_obj = os.path.join("build", "arm9", os.path.basename(src).replace(ext, ".o"))
         ninja_body.append(f"build {rel_obj}: cc_arm9 {src}")
 
     for src in arm7_sources:
-        rel_obj = os.path.join("build", "arm7", os.path.basename(src).replace(".c", ".o"))
+        ext = ".cpp" if src.endswith(".cpp") else ".c"
+        rel_obj = os.path.join("build", "arm7", os.path.basename(src).replace(ext, ".o"))
         ninja_body.append(f"build {rel_obj}: cc_arm7 {src}")
 
     ninja_body.append("\ndefault extracted/pictochat_arm9_dec.bin extracted/pictochat_arm7_dec.bin\n")
