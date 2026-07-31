@@ -90,10 +90,15 @@ def compile_c(cfile: pathlib.Path, version: str, flags: str) -> bytes | None:
     if not exe.is_file():
         print(f"  ! no compiler at {version}")
         return None
+    # Cross-run the Windows compiler under an emulator when asked: the PR-validator
+    # sandbox runs this in a Linux container and sets MWCCARM_LAUNCHER=wine so the
+    # PE is invoked via Wine. Unset on native Windows -> exe is run directly, so this
+    # is a no-op for every existing caller. Ported from sm64ds-decomp's match.py.
+    launcher = os.environ.get("MWCCARM_LAUNCHER", "").split()
     with tempfile.TemporaryDirectory() as td:
         out_o = pathlib.Path(td) / "out.o"
         env = dict(os.environ, LM_LICENSE_FILE=str(LICENSE))
-        cmd = [str(exe), *flags.split(), "-c", str(cfile), "-o", str(out_o)]
+        cmd = [*launcher, str(exe), *flags.split(), "-c", str(cfile), "-o", str(out_o)]
         try:
             r = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=90)
         except subprocess.TimeoutExpired:
