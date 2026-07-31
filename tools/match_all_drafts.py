@@ -57,6 +57,8 @@ for ddir in draft_dirs:
                 '--size', size_str,
                 '--module', mod
             ]
+            if 'arm7' in ddir.lower():
+                cmd.extend(['--flags', '-O4,p -enum int -lang c++ -char signed -interworking -proc arm7tdmi -gccext,on -msgstyle gcc -Iinclude'])
             res = subprocess.run(cmd, capture_output=True, text=True)
             stdout = res.stdout
 
