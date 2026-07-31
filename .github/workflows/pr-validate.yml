@@ -1,0 +1,118 @@
+name: PR link validation
+
+# Uses pull_request_target so repo secrets (the relay token) are available even
+# for fork PRs. SAFE because this workflow never checks out or runs PR code — it
+# only sends the PR number + head sha to the relay. The actual compile/linkcheck
+# happens on the self-hosted worker behind the maintainer's NAT, sandboxed there.
+#
+# Mirrors tangosdev/sm64ds-decomp's pr-validate.yml (same relay, same worker --
+# see tools/pr_linkcheck.py for what's actually checked and NOT yet checked here:
+# relocation *destinations* aren't verified for this repo, only instruction words
+# and reloc positions, since config/**/relocs.txt doesn't exist yet).
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  # Key on the head SHA, not the PR number. Grouping by PR number meant every new event for
+  # that PR cancelled the run already in flight, so a branch that gets pushed to repeatedly
+  # could never finish a validation: each check went queued -> cancelled and the PR never
+  # reached a verdict, leaving it unmergeable and, worse, looking "clean" at a glance because
+  # an unconcluded check reads as UNSTABLE rather than red. Per-SHA grouping still collapses
+  # duplicate events for the SAME commit (reopen, re-request) into one run, which is the
+  # actual waste worth avoiding; a genuinely new commit deserves its own check. Cost is that a
+  # superseded commit may finish a run nobody reads - ~30s on the build box, cheap next to a
+  # PR that can never be merged.
+  group: pr-validate-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit validation job
+        id: submit
+        env:
+          RELAY: ${{ secrets.PR_VALIDATE_RELAY }}
+          TOKEN: ${{ secrets.PR_VALIDATE_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          resp=$(curl -sS -X POST "$RELAY/api/pr-validate" \
+            -H "X-Api-Key: $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"repo\":\"$REPO\",\"pr\":$PR,\"sha\":\"$SHA\"}")
+          echo "$resp"
+          jobId=$(echo "$resp" | jq -r '.jobId // empty')
+          if [ -z "$jobId" ]; then echo "relay did not return a jobId"; exit 1; fi
+          echo "jobId=$jobId" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for result
+        id: poll
+        env:
+          RELAY: ${{ secrets.PR_VALIDATE_RELAY }}
+          TOKEN: ${{ secrets.PR_VALIDATE_TOKEN }}
+          JOB: ${{ steps.submit.outputs.jobId }}
+        run: |
+          set -euo pipefail
+          status=""
+          for i in $(seq 1 120); do   # up to ~20 min (120 * 10s)
+            r=$(curl -sS "$RELAY/api/pr-validate/$JOB" -H "X-Api-Key: $TOKEN")
+            status=$(echo "$r" | jq -r '.status // empty')
+            case "$status" in
+              Passed|Failed|Error)
+                echo "$r" > result.json
+                break ;;
+            esac
+            sleep 10
+          done
+          if [ ! -f result.json ]; then
+            echo "status=Timeout" >> "$GITHUB_OUTPUT"
+            echo 'summary=Validation timed out — is the build-box worker running?' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "summary<<EOF"; jq -r '.summary // ""' result.json; echo "EOF"
+            echo "details<<EOF"; jq -r '.details // ""' result.json; echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment result
+        uses: actions/github-script@v7
+        env:
+          STATUS: ${{ steps.poll.outputs.status }}
+          SUMMARY: ${{ steps.poll.outputs.summary }}
+          DETAILS: ${{ steps.poll.outputs.details }}
+        with:
+          script: |
+            const { STATUS, SUMMARY, DETAILS } = process.env;
+            const icon = STATUS === 'Passed' ? '✅'
+                       : STATUS === 'Failed' ? '❌'
+                       : '⚠️';
+            const marker = '<!-- pr-link-validation -->';
+            let body = `${marker}\n### ${icon} PR link validation — ${STATUS}\n\n${SUMMARY || ''}`;
+            if (DETAILS && DETAILS.trim()) {
+              // DETAILS is a markdown table from pr_linkcheck --md. Wrap it in a
+              // <details> fold; the blank lines let GitHub render the markdown
+              // inside (a code fence would show it as raw ASCII instead).
+              body += `\n\n<details><summary>Per-file link-check detail</summary>\n\n${DETAILS.trim()}\n\n</details>`;
+            }
+            body += `\n\n<sub>Each changed \`src/arm9|arm7/*.c|*.cpp\` is compiled and byte-compared to the extracted binary on a private build box. Passing requires every changed file to reproduce it byte-for-byte. Note: this repo has no relocation-destination ground truth yet (config/**/relocs.txt), so a WRONG-DEST relocation to the wrong callee/global would NOT be caught here — only instruction words and reloc positions are verified.</sub>`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Fail the check if validation failed
+        if: steps.poll.outputs.status == 'Failed'
+        run: |
+          echo "PR link validation failed"; exit 1
