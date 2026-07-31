@@ -6592,7 +6592,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "MSL_02332884",
+    "name": "msl_runtime_02332884",
     "module": "unk_autoload_0",
     "addr": 36907140,
     "size": 48,
@@ -6600,7 +6600,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023328b8",
+    "name": "msl_runtime_023328b8",
     "module": "unk_autoload_0",
     "addr": 36907192,
     "size": 36,
@@ -6608,7 +6608,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023328e0",
+    "name": "msl_runtime_023328e0",
     "module": "unk_autoload_0",
     "addr": 36907232,
     "size": 54,
@@ -6616,7 +6616,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233291c",
+    "name": "msl_runtime_0233291c",
     "module": "unk_autoload_0",
     "addr": 36907292,
     "size": 22,
@@ -6624,7 +6624,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332934",
+    "name": "msl_runtime_02332934",
     "module": "unk_autoload_0",
     "addr": 36907316,
     "size": 46,
@@ -6632,7 +6632,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332964",
+    "name": "msl_runtime_02332964",
     "module": "unk_autoload_0",
     "addr": 36907364,
     "size": 100,
@@ -6640,7 +6640,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023329cc",
+    "name": "msl_runtime_023329cc",
     "module": "unk_autoload_0",
     "addr": 36907468,
     "size": 100,
@@ -6648,7 +6648,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332a44",
+    "name": "msl_formatted_io_02332a44",
     "module": "unk_autoload_0",
     "addr": 36907588,
     "size": 288,
@@ -6656,7 +6656,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332be8",
+    "name": "msl_runtime_02332be8",
     "module": "unk_autoload_0",
     "addr": 36908008,
     "size": 14,
@@ -6664,7 +6664,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332c04",
+    "name": "msl_runtime_02332c04",
     "module": "unk_autoload_0",
     "addr": 36908036,
     "size": 82,
@@ -6672,7 +6672,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332c68",
+    "name": "msl_runtime_02332c68",
     "module": "unk_autoload_0",
     "addr": 36908136,
     "size": 8,
@@ -6680,7 +6680,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332c74",
+    "name": "msl_helper_02332c74",
     "module": "unk_autoload_0",
     "addr": 36908148,
     "size": 144,
@@ -6688,7 +6688,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d10",
+    "name": "msl_stub_02332d10",
     "module": "unk_autoload_0",
     "addr": 36908304,
     "size": 4,
@@ -6696,7 +6696,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d2e",
+    "name": "msl_stub_02332d2e",
     "module": "unk_autoload_0",
     "addr": 36908334,
     "size": 4,
@@ -6704,7 +6704,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d32",
+    "name": "msl_stub_02332d32",
     "module": "unk_autoload_0",
     "addr": 36908338,
     "size": 4,
@@ -6712,7 +6712,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d3a",
+    "name": "msl_stub_02332d3a",
     "module": "unk_autoload_0",
     "addr": 36908346,
     "size": 4,
@@ -6720,7 +6720,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d42",
+    "name": "msl_stub_02332d42",
     "module": "unk_autoload_0",
     "addr": 36908354,
     "size": 4,
@@ -6728,7 +6728,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d4e",
+    "name": "msl_stub_02332d4e",
     "module": "unk_autoload_0",
     "addr": 36908366,
     "size": 4,
@@ -6736,7 +6736,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d84",
+    "name": "msl_stub_02332d84",
     "module": "unk_autoload_0",
     "addr": 36908420,
     "size": 14,
@@ -6744,7 +6744,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332d94",
+    "name": "msl_runtime_02332d94",
     "module": "unk_autoload_0",
     "addr": 36908436,
     "size": 12,
@@ -6752,7 +6752,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332da4",
+    "name": "msl_runtime_02332da4",
     "module": "unk_autoload_0",
     "addr": 36908452,
     "size": 80,
@@ -6760,7 +6760,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332df4",
+    "name": "msl_runtime_02332df4",
     "module": "unk_autoload_0",
     "addr": 36908532,
     "size": 26,
@@ -6768,7 +6768,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332e10",
+    "name": "msl_runtime_02332e10",
     "module": "unk_autoload_0",
     "addr": 36908560,
     "size": 12,
@@ -6776,7 +6776,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332e1c",
+    "name": "strlen_02332e1c",
     "module": "unk_autoload_0",
     "addr": 36908572,
     "size": 28,
@@ -6784,7 +6784,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332e38",
+    "name": "msl_runtime_02332e38",
     "module": "unk_autoload_0",
     "addr": 36908600,
     "size": 54,
@@ -6800,7 +6800,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02332ee4",
+    "name": "msl_runtime_02332ee4",
     "module": "unk_autoload_0",
     "addr": 36908772,
     "size": 866,
@@ -6808,7 +6808,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333288",
+    "name": "msl_runtime_02333288",
     "module": "unk_autoload_0",
     "addr": 36909704,
     "size": 422,
@@ -6816,7 +6816,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333434",
+    "name": "msl_runtime_02333434",
     "module": "unk_autoload_0",
     "addr": 36910132,
     "size": 528,
@@ -6824,7 +6824,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333648",
+    "name": "msl_runtime_02333648",
     "module": "unk_autoload_0",
     "addr": 36910664,
     "size": 780,
@@ -6832,7 +6832,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333980",
+    "name": "msl_runtime_02333980",
     "module": "unk_autoload_0",
     "addr": 36911488,
     "size": 182,
@@ -6840,7 +6840,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333a38",
+    "name": "msl_runtime_02333a38",
     "module": "unk_autoload_0",
     "addr": 36911672,
     "size": 1208,
@@ -6848,7 +6848,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02333f20",
+    "name": "msl_formatted_io_02333f20",
     "module": "unk_autoload_0",
     "addr": 36912928,
     "size": 1428,
@@ -6856,7 +6856,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334528",
+    "name": "msl_string_util_02334528",
     "module": "unk_autoload_0",
     "addr": 36914472,
     "size": 56,
@@ -6864,7 +6864,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334564",
+    "name": "msl_runtime_02334564",
     "module": "unk_autoload_0",
     "addr": 36914532,
     "size": 30,
@@ -6872,7 +6872,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334584",
+    "name": "msl_runtime_02334584",
     "module": "unk_autoload_0",
     "addr": 36914564,
     "size": 20,
@@ -6880,7 +6880,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334598",
+    "name": "msl_runtime_02334598",
     "module": "unk_autoload_0",
     "addr": 36914584,
     "size": 54,
@@ -6888,7 +6888,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023345d0",
+    "name": "msl_runtime_023345d0",
     "module": "unk_autoload_0",
     "addr": 36914640,
     "size": 44,
@@ -6896,7 +6896,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023345fc",
+    "name": "msl_runtime_023345fc",
     "module": "unk_autoload_0",
     "addr": 36914684,
     "size": 18,
@@ -6904,7 +6904,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334610",
+    "name": "msl_runtime_02334610",
     "module": "unk_autoload_0",
     "addr": 36914704,
     "size": 24,
@@ -6912,7 +6912,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334628",
+    "name": "msl_runtime_02334628",
     "module": "unk_autoload_0",
     "addr": 36914728,
     "size": 50,
@@ -6920,7 +6920,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233465c",
+    "name": "msl_runtime_0233465c",
     "module": "unk_autoload_0",
     "addr": 36914780,
     "size": 34,
@@ -6928,7 +6928,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334680",
+    "name": "msl_runtime_02334680",
     "module": "unk_autoload_0",
     "addr": 36914816,
     "size": 38,
@@ -6936,7 +6936,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023346a8",
+    "name": "msl_runtime_023346a8",
     "module": "unk_autoload_0",
     "addr": 36914856,
     "size": 36,
@@ -6944,7 +6944,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023346cc",
+    "name": "msl_runtime_023346cc",
     "module": "unk_autoload_0",
     "addr": 36914892,
     "size": 28,
@@ -6952,7 +6952,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023346ec",
+    "name": "msl_runtime_023346ec",
     "module": "unk_autoload_0",
     "addr": 36914924,
     "size": 20,
@@ -6960,7 +6960,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334704",
+    "name": "msl_runtime_02334704",
     "module": "unk_autoload_0",
     "addr": 36914948,
     "size": 106,
@@ -6968,7 +6968,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334784",
+    "name": "msl_runtime_02334784",
     "module": "unk_autoload_0",
     "addr": 36915076,
     "size": 326,
@@ -6976,7 +6976,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023348fc",
+    "name": "msl_runtime_023348fc",
     "module": "unk_autoload_0",
     "addr": 36915452,
     "size": 74,
@@ -6984,7 +6984,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334948",
+    "name": "msl_runtime_02334948",
     "module": "unk_autoload_0",
     "addr": 36915528,
     "size": 50,
@@ -6992,7 +6992,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334980",
+    "name": "msl_runtime_02334980",
     "module": "unk_autoload_0",
     "addr": 36915584,
     "size": 36,
@@ -7000,7 +7000,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023349a4",
+    "name": "msl_runtime_023349a4",
     "module": "unk_autoload_0",
     "addr": 36915620,
     "size": 114,
@@ -7008,7 +7008,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334a18",
+    "name": "msl_runtime_02334a18",
     "module": "unk_autoload_0",
     "addr": 36915736,
     "size": 262,
@@ -7016,7 +7016,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334b20",
+    "name": "msl_helper_02334b20",
     "module": "unk_autoload_0",
     "addr": 36916000,
     "size": 96,
@@ -7024,7 +7024,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334b80",
+    "name": "msl_string_util_02334b80",
     "module": "unk_autoload_0",
     "addr": 36916096,
     "size": 404,
@@ -7032,7 +7032,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334dbc",
+    "name": "msl_runtime_02334dbc",
     "module": "unk_autoload_0",
     "addr": 36916668,
     "size": 248,
@@ -7040,7 +7040,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334eb4",
+    "name": "msl_runtime_02334eb4",
     "module": "unk_autoload_0",
     "addr": 36916916,
     "size": 94,
@@ -7048,7 +7048,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334f14",
+    "name": "msl_runtime_02334f14",
     "module": "unk_autoload_0",
     "addr": 36917012,
     "size": 102,
@@ -7056,7 +7056,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334f88",
+    "name": "msl_stub_02334f88",
     "module": "unk_autoload_0",
     "addr": 36917128,
     "size": 14,
@@ -7064,7 +7064,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334f98",
+    "name": "msl_runtime_02334f98",
     "module": "unk_autoload_0",
     "addr": 36917144,
     "size": 70,
@@ -7072,7 +7072,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02334fe8",
+    "name": "msl_runtime_02334fe8",
     "module": "unk_autoload_0",
     "addr": 36917224,
     "size": 772,
@@ -7080,7 +7080,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335300",
+    "name": "msl_runtime_02335300",
     "module": "unk_autoload_0",
     "addr": 36918016,
     "size": 136,
@@ -7088,7 +7088,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233538c",
+    "name": "msl_runtime_0233538c",
     "module": "unk_autoload_0",
     "addr": 36918156,
     "size": 864,
@@ -7096,7 +7096,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335708",
+    "name": "msl_runtime_02335708",
     "module": "unk_autoload_0",
     "addr": 36919048,
     "size": 944,
@@ -7104,7 +7104,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335abc",
+    "name": "msl_runtime_02335abc",
     "module": "unk_autoload_0",
     "addr": 36919996,
     "size": 156,
@@ -7112,7 +7112,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335b58",
+    "name": "msl_runtime_02335b58",
     "module": "unk_autoload_0",
     "addr": 36920152,
     "size": 140,
@@ -7120,7 +7120,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335da4",
+    "name": "msl_runtime_02335da4",
     "module": "unk_autoload_0",
     "addr": 36920740,
     "size": 320,
@@ -7128,7 +7128,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335db0",
+    "name": "msl_runtime_02335db0",
     "module": "unk_autoload_0",
     "addr": 36920752,
     "size": 60,
@@ -7136,7 +7136,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335dec",
+    "name": "msl_runtime_02335dec",
     "module": "unk_autoload_0",
     "addr": 36920812,
     "size": 32,
@@ -7144,7 +7144,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02335e0c",
+    "name": "msl_runtime_02335e0c",
     "module": "unk_autoload_0",
     "addr": 36920844,
     "size": 132,
@@ -7152,7 +7152,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336018",
+    "name": "msl_runtime_02336018",
     "module": "unk_autoload_0",
     "addr": 36921368,
     "size": 8,
@@ -7160,7 +7160,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336020",
+    "name": "msl_runtime_02336020",
     "module": "unk_autoload_0",
     "addr": 36921376,
     "size": 80,
@@ -7168,7 +7168,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023361fc",
+    "name": "msl_runtime_023361fc",
     "module": "unk_autoload_0",
     "addr": 36921852,
     "size": 4,
@@ -7176,7 +7176,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336200",
+    "name": "msl_runtime_02336200",
     "module": "unk_autoload_0",
     "addr": 36921856,
     "size": 22,
@@ -7184,7 +7184,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233621c",
+    "name": "msl_runtime_0233621c",
     "module": "unk_autoload_0",
     "addr": 36921884,
     "size": 24,
@@ -7192,7 +7192,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336234",
+    "name": "msl_runtime_02336234",
     "module": "unk_autoload_0",
     "addr": 36921908,
     "size": 180,
@@ -7200,7 +7200,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336310",
+    "name": "msl_runtime_02336310",
     "module": "unk_autoload_0",
     "addr": 36922128,
     "size": 32,
@@ -7208,7 +7208,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336334",
+    "name": "msl_runtime_02336334",
     "module": "unk_autoload_0",
     "addr": 36922164,
     "size": 34,
@@ -7216,7 +7216,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336368",
+    "name": "msl_runtime_02336368",
     "module": "unk_autoload_0",
     "addr": 36922216,
     "size": 46,
@@ -7224,7 +7224,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023363a4",
+    "name": "msl_runtime_023363a4",
     "module": "unk_autoload_0",
     "addr": 36922276,
     "size": 62,
@@ -7232,7 +7232,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023363f0",
+    "name": "msl_stub_023363f0",
     "module": "unk_autoload_0",
     "addr": 36922352,
     "size": 14,
@@ -7240,7 +7240,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336404",
+    "name": "msl_runtime_02336404",
     "module": "unk_autoload_0",
     "addr": 36922372,
     "size": 34,
@@ -7248,7 +7248,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336428",
+    "name": "msl_runtime_02336428",
     "module": "unk_autoload_0",
     "addr": 36922408,
     "size": 28,
@@ -7256,7 +7256,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336444",
+    "name": "msl_runtime_02336444",
     "module": "unk_autoload_0",
     "addr": 36922436,
     "size": 26,
@@ -7264,7 +7264,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336460",
+    "name": "msl_runtime_02336460",
     "module": "unk_autoload_0",
     "addr": 36922464,
     "size": 38,
@@ -7272,7 +7272,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233648c",
+    "name": "msl_runtime_0233648c",
     "module": "unk_autoload_0",
     "addr": 36922508,
     "size": 22,
@@ -7280,7 +7280,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023364a8",
+    "name": "msl_runtime_023364a8",
     "module": "unk_autoload_0",
     "addr": 36922536,
     "size": 38,
@@ -7288,7 +7288,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023364d4",
+    "name": "msl_runtime_023364d4",
     "module": "unk_autoload_0",
     "addr": 36922580,
     "size": 22,
@@ -7296,7 +7296,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023364f0",
+    "name": "msl_runtime_023364f0",
     "module": "unk_autoload_0",
     "addr": 36922608,
     "size": 132,
@@ -7304,7 +7304,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336574",
+    "name": "msl_runtime_02336574",
     "module": "unk_autoload_0",
     "addr": 36922740,
     "size": 80,
@@ -7312,7 +7312,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023365d8",
+    "name": "msl_runtime_023365d8",
     "module": "unk_autoload_0",
     "addr": 36922840,
     "size": 132,
@@ -7320,7 +7320,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233665c",
+    "name": "msl_runtime_0233665c",
     "module": "unk_autoload_0",
     "addr": 36922972,
     "size": 80,
@@ -7328,7 +7328,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023366c0",
+    "name": "msl_runtime_023366c0",
     "module": "unk_autoload_0",
     "addr": 36923072,
     "size": 36,
@@ -7336,7 +7336,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023366e8",
+    "name": "msl_runtime_023366e8",
     "module": "unk_autoload_0",
     "addr": 36923112,
     "size": 36,
@@ -7344,7 +7344,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336710",
+    "name": "msl_runtime_02336710",
     "module": "unk_autoload_0",
     "addr": 36923152,
     "size": 20,
@@ -7352,7 +7352,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336728",
+    "name": "msl_runtime_02336728",
     "module": "unk_autoload_0",
     "addr": 36923176,
     "size": 60,
@@ -7360,7 +7360,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336764",
+    "name": "msl_runtime_02336764",
     "module": "unk_autoload_0",
     "addr": 36923236,
     "size": 40,
@@ -7368,7 +7368,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336790",
+    "name": "msl_runtime_02336790",
     "module": "unk_autoload_0",
     "addr": 36923280,
     "size": 44,
@@ -7376,7 +7376,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023367c0",
+    "name": "msl_runtime_023367c0",
     "module": "unk_autoload_0",
     "addr": 36923328,
     "size": 58,
@@ -7384,7 +7384,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336800",
+    "name": "msl_runtime_02336800",
     "module": "unk_autoload_0",
     "addr": 36923392,
     "size": 54,
@@ -7392,7 +7392,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336840",
+    "name": "msl_runtime_02336840",
     "module": "unk_autoload_0",
     "addr": 36923456,
     "size": 54,
@@ -7400,7 +7400,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336880",
+    "name": "msl_runtime_02336880",
     "module": "unk_autoload_0",
     "addr": 36923520,
     "size": 54,
@@ -7408,7 +7408,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023368c0",
+    "name": "msl_runtime_023368c0",
     "module": "unk_autoload_0",
     "addr": 36923584,
     "size": 58,
@@ -7416,7 +7416,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336900",
+    "name": "msl_runtime_02336900",
     "module": "unk_autoload_0",
     "addr": 36923648,
     "size": 54,
@@ -7424,7 +7424,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336940",
+    "name": "msl_runtime_02336940",
     "module": "unk_autoload_0",
     "addr": 36923712,
     "size": 54,
@@ -7432,7 +7432,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233697c",
+    "name": "msl_runtime_0233697c",
     "module": "unk_autoload_0",
     "addr": 36923772,
     "size": 54,
@@ -7440,7 +7440,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023369b8",
+    "name": "msl_runtime_023369b8",
     "module": "unk_autoload_0",
     "addr": 36923832,
     "size": 64,
@@ -7448,7 +7448,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023369fc",
+    "name": "msl_runtime_023369fc",
     "module": "unk_autoload_0",
     "addr": 36923900,
     "size": 64,
@@ -7456,7 +7456,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336a40",
+    "name": "msl_runtime_02336a40",
     "module": "unk_autoload_0",
     "addr": 36923968,
     "size": 64,
@@ -7464,7 +7464,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336a84",
+    "name": "msl_runtime_02336a84",
     "module": "unk_autoload_0",
     "addr": 36924036,
     "size": 64,
@@ -7472,7 +7472,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336ac8",
+    "name": "msl_runtime_02336ac8",
     "module": "unk_autoload_0",
     "addr": 36924104,
     "size": 64,
@@ -7480,7 +7480,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336b0c",
+    "name": "msl_runtime_02336b0c",
     "module": "unk_autoload_0",
     "addr": 36924172,
     "size": 64,
@@ -7488,7 +7488,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336b50",
+    "name": "msl_runtime_02336b50",
     "module": "unk_autoload_0",
     "addr": 36924240,
     "size": 64,
@@ -7496,7 +7496,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336b94",
+    "name": "msl_runtime_02336b94",
     "module": "unk_autoload_0",
     "addr": 36924308,
     "size": 64,
@@ -7504,7 +7504,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336bd8",
+    "name": "msl_runtime_02336bd8",
     "module": "unk_autoload_0",
     "addr": 36924376,
     "size": 64,
@@ -7512,7 +7512,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336c1c",
+    "name": "msl_runtime_02336c1c",
     "module": "unk_autoload_0",
     "addr": 36924444,
     "size": 64,
@@ -7520,7 +7520,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336c60",
+    "name": "msl_runtime_02336c60",
     "module": "unk_autoload_0",
     "addr": 36924512,
     "size": 64,
@@ -7528,7 +7528,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336ca4",
+    "name": "msl_runtime_02336ca4",
     "module": "unk_autoload_0",
     "addr": 36924580,
     "size": 64,
@@ -7536,7 +7536,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336ce8",
+    "name": "msl_runtime_02336ce8",
     "module": "unk_autoload_0",
     "addr": 36924648,
     "size": 64,
@@ -7544,7 +7544,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336d2c",
+    "name": "msl_runtime_02336d2c",
     "module": "unk_autoload_0",
     "addr": 36924716,
     "size": 64,
@@ -7552,7 +7552,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336e04",
+    "name": "msl_runtime_02336e04",
     "module": "unk_autoload_0",
     "addr": 36924932,
     "size": 254,
@@ -7560,7 +7560,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02336f68",
+    "name": "msl_runtime_02336f68",
     "module": "unk_autoload_0",
     "addr": 36925288,
     "size": 158,
@@ -7568,7 +7568,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233702c",
+    "name": "msl_runtime_0233702c",
     "module": "unk_autoload_0",
     "addr": 36925484,
     "size": 12,
@@ -7576,7 +7576,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337040",
+    "name": "msl_runtime_02337040",
     "module": "unk_autoload_0",
     "addr": 36925504,
     "size": 74,
@@ -7584,7 +7584,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023370a0",
+    "name": "msl_runtime_023370a0",
     "module": "unk_autoload_0",
     "addr": 36925600,
     "size": 54,
@@ -7592,7 +7592,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337194",
+    "name": "msl_runtime_02337194",
     "module": "unk_autoload_0",
     "addr": 36925844,
     "size": 6,
@@ -7600,7 +7600,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023371a4",
+    "name": "msl_runtime_023371a4",
     "module": "unk_autoload_0",
     "addr": 36925860,
     "size": 44,
@@ -7608,7 +7608,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023371d8",
+    "name": "msl_stub_023371d8",
     "module": "unk_autoload_0",
     "addr": 36925912,
     "size": 6,
@@ -7616,7 +7616,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023371e4",
+    "name": "msl_runtime_023371e4",
     "module": "unk_autoload_0",
     "addr": 36925924,
     "size": 86,
@@ -7624,7 +7624,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337240",
+    "name": "msl_helper_02337240",
     "module": "unk_autoload_0",
     "addr": 36926016,
     "size": 108,
@@ -7632,7 +7632,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023372b0",
+    "name": "msl_helper_023372b0",
     "module": "unk_autoload_0",
     "addr": 36926128,
     "size": 102,
@@ -7640,7 +7640,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233731c",
+    "name": "msl_runtime_0233731c",
     "module": "unk_autoload_0",
     "addr": 36926236,
     "size": 48,
@@ -7648,7 +7648,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337358",
+    "name": "msl_runtime_02337358",
     "module": "unk_autoload_0",
     "addr": 36926296,
     "size": 62,
@@ -7656,7 +7656,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023373a8",
+    "name": "msl_runtime_023373a8",
     "module": "unk_autoload_0",
     "addr": 36926376,
     "size": 28,
@@ -7664,7 +7664,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023373c4",
+    "name": "msl_runtime_023373c4",
     "module": "unk_autoload_0",
     "addr": 36926404,
     "size": 70,
@@ -7672,7 +7672,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233740c",
+    "name": "msl_runtime_0233740c",
     "module": "unk_autoload_0",
     "addr": 36926476,
     "size": 24,
@@ -7680,7 +7680,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337424",
+    "name": "msl_runtime_02337424",
     "module": "unk_autoload_0",
     "addr": 36926500,
     "size": 28,
@@ -7688,7 +7688,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337440",
+    "name": "msl_runtime_02337440",
     "module": "unk_autoload_0",
     "addr": 36926528,
     "size": 20,
@@ -7696,7 +7696,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337454",
+    "name": "msl_runtime_02337454",
     "module": "unk_autoload_0",
     "addr": 36926548,
     "size": 24,
@@ -7704,7 +7704,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233746c",
+    "name": "msl_runtime_0233746c",
     "module": "unk_autoload_0",
     "addr": 36926572,
     "size": 76,
@@ -7712,7 +7712,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023374b8",
+    "name": "msl_runtime_023374b8",
     "module": "unk_autoload_0",
     "addr": 36926648,
     "size": 56,
@@ -7720,7 +7720,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023374f0",
+    "name": "msl_runtime_023374f0",
     "module": "unk_autoload_0",
     "addr": 36926704,
     "size": 148,
@@ -7728,7 +7728,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337584",
+    "name": "msl_runtime_02337584",
     "module": "unk_autoload_0",
     "addr": 36926852,
     "size": 304,
@@ -7736,7 +7736,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023376b4",
+    "name": "msl_runtime_023376b4",
     "module": "unk_autoload_0",
     "addr": 36927156,
     "size": 8,
@@ -7744,7 +7744,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023376bc",
+    "name": "msl_runtime_023376bc",
     "module": "unk_autoload_0",
     "addr": 36927164,
     "size": 16,
@@ -7752,7 +7752,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023376cc",
+    "name": "msl_runtime_023376cc",
     "module": "unk_autoload_0",
     "addr": 36927180,
     "size": 18,
@@ -7760,7 +7760,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023376e0",
+    "name": "msl_runtime_023376e0",
     "module": "unk_autoload_0",
     "addr": 36927200,
     "size": 28,
@@ -7768,7 +7768,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023376fc",
+    "name": "msl_runtime_023376fc",
     "module": "unk_autoload_0",
     "addr": 36927228,
     "size": 18,
@@ -7776,7 +7776,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337710",
+    "name": "msl_runtime_02337710",
     "module": "unk_autoload_0",
     "addr": 36927248,
     "size": 14,
@@ -7784,7 +7784,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337720",
+    "name": "msl_runtime_02337720",
     "module": "unk_autoload_0",
     "addr": 36927264,
     "size": 14,
@@ -7792,7 +7792,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337730",
+    "name": "msl_runtime_02337730",
     "module": "unk_autoload_0",
     "addr": 36927280,
     "size": 16,
@@ -7800,7 +7800,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337740",
+    "name": "msl_runtime_02337740",
     "module": "unk_autoload_0",
     "addr": 36927296,
     "size": 16,
@@ -7808,7 +7808,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337750",
+    "name": "msl_runtime_02337750",
     "module": "unk_autoload_0",
     "addr": 36927312,
     "size": 24,
@@ -7816,7 +7816,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337768",
+    "name": "msl_runtime_02337768",
     "module": "unk_autoload_0",
     "addr": 36927336,
     "size": 28,
@@ -7824,7 +7824,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337784",
+    "name": "msl_runtime_02337784",
     "module": "unk_autoload_0",
     "addr": 36927364,
     "size": 64,
@@ -7832,7 +7832,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023377c4",
+    "name": "msl_runtime_023377c4",
     "module": "unk_autoload_0",
     "addr": 36927428,
     "size": 48,
@@ -7840,7 +7840,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023377f4",
+    "name": "msl_runtime_023377f4",
     "module": "unk_autoload_0",
     "addr": 36927476,
     "size": 36,
@@ -7848,7 +7848,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337818",
+    "name": "msl_runtime_02337818",
     "module": "unk_autoload_0",
     "addr": 36927512,
     "size": 24,
@@ -7856,7 +7856,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337830",
+    "name": "msl_runtime_02337830",
     "module": "unk_autoload_0",
     "addr": 36927536,
     "size": 24,
@@ -7864,7 +7864,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337848",
+    "name": "msl_runtime_02337848",
     "module": "unk_autoload_0",
     "addr": 36927560,
     "size": 24,
@@ -7872,7 +7872,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337860",
+    "name": "msl_runtime_02337860",
     "module": "unk_autoload_0",
     "addr": 36927584,
     "size": 50,
@@ -7880,7 +7880,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337894",
+    "name": "msl_runtime_02337894",
     "module": "unk_autoload_0",
     "addr": 36927636,
     "size": 24,
@@ -7888,7 +7888,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023378ac",
+    "name": "msl_runtime_023378ac",
     "module": "unk_autoload_0",
     "addr": 36927660,
     "size": 24,
@@ -7896,7 +7896,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023378c4",
+    "name": "msl_runtime_023378c4",
     "module": "unk_autoload_0",
     "addr": 36927684,
     "size": 28,
@@ -7904,7 +7904,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023378e0",
+    "name": "msl_runtime_023378e0",
     "module": "unk_autoload_0",
     "addr": 36927712,
     "size": 28,
@@ -7912,7 +7912,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023378fc",
+    "name": "msl_runtime_023378fc",
     "module": "unk_autoload_0",
     "addr": 36927740,
     "size": 32,
@@ -7920,7 +7920,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233791c",
+    "name": "msl_runtime_0233791c",
     "module": "unk_autoload_0",
     "addr": 36927772,
     "size": 18,
@@ -7928,7 +7928,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337930",
+    "name": "msl_runtime_02337930",
     "module": "unk_autoload_0",
     "addr": 36927792,
     "size": 38,
@@ -7936,7 +7936,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337958",
+    "name": "msl_runtime_02337958",
     "module": "unk_autoload_0",
     "addr": 36927832,
     "size": 30,
@@ -7944,7 +7944,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337980",
+    "name": "msl_runtime_02337980",
     "module": "unk_autoload_0",
     "addr": 36927872,
     "size": 6,
@@ -7952,7 +7952,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337990",
+    "name": "msl_runtime_02337990",
     "module": "unk_autoload_0",
     "addr": 36927888,
     "size": 6,
@@ -7960,7 +7960,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023379a0",
+    "name": "msl_helper_023379a0",
     "module": "unk_autoload_0",
     "addr": 36927904,
     "size": 110,
@@ -7968,7 +7968,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337a28",
+    "name": "msl_helper_02337a28",
     "module": "unk_autoload_0",
     "addr": 36928040,
     "size": 160,
@@ -7976,7 +7976,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337ad0",
+    "name": "msl_runtime_02337ad0",
     "module": "unk_autoload_0",
     "addr": 36928208,
     "size": 92,
@@ -7984,7 +7984,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337b2c",
+    "name": "msl_runtime_02337b2c",
     "module": "unk_autoload_0",
     "addr": 36928300,
     "size": 34,
@@ -7992,7 +7992,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337b54",
+    "name": "msl_runtime_02337b54",
     "module": "unk_autoload_0",
     "addr": 36928340,
     "size": 262,
@@ -8000,7 +8000,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337c68",
+    "name": "msl_runtime_02337c68",
     "module": "unk_autoload_0",
     "addr": 36928616,
     "size": 68,
@@ -8008,7 +8008,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337cac",
+    "name": "msl_runtime_02337cac",
     "module": "unk_autoload_0",
     "addr": 36928684,
     "size": 28,
@@ -8016,7 +8016,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337ccc",
+    "name": "msl_runtime_02337ccc",
     "module": "unk_autoload_0",
     "addr": 36928716,
     "size": 58,
@@ -8024,7 +8024,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337d0c",
+    "name": "msl_runtime_02337d0c",
     "module": "unk_autoload_0",
     "addr": 36928780,
     "size": 32,
@@ -8032,7 +8032,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337d30",
+    "name": "msl_runtime_02337d30",
     "module": "unk_autoload_0",
     "addr": 36928816,
     "size": 32,
@@ -8040,7 +8040,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337d54",
+    "name": "msl_runtime_02337d54",
     "module": "unk_autoload_0",
     "addr": 36928852,
     "size": 22,
@@ -8048,7 +8048,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337d6c",
+    "name": "msl_runtime_02337d6c",
     "module": "unk_autoload_0",
     "addr": 36928876,
     "size": 24,
@@ -8056,7 +8056,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337d84",
+    "name": "msl_helper_02337d84",
     "module": "unk_autoload_0",
     "addr": 36928900,
     "size": 56,
@@ -8064,7 +8064,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337dc0",
+    "name": "msl_runtime_02337dc0",
     "module": "unk_autoload_0",
     "addr": 36928960,
     "size": 22,
@@ -8072,7 +8072,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337dd8",
+    "name": "msl_runtime_02337dd8",
     "module": "unk_autoload_0",
     "addr": 36928984,
     "size": 42,
@@ -8080,7 +8080,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337e08",
+    "name": "msl_runtime_02337e08",
     "module": "unk_autoload_0",
     "addr": 36929032,
     "size": 42,
@@ -8088,7 +8088,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337e38",
+    "name": "msl_runtime_02337e38",
     "module": "unk_autoload_0",
     "addr": 36929080,
     "size": 22,
@@ -8096,7 +8096,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337e54",
+    "name": "msl_stub_02337e54",
     "module": "unk_autoload_0",
     "addr": 36929108,
     "size": 16,
@@ -8104,7 +8104,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337e68",
+    "name": "msl_runtime_02337e68",
     "module": "unk_autoload_0",
     "addr": 36929128,
     "size": 26,
@@ -8112,7 +8112,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337e88",
+    "name": "msl_runtime_02337e88",
     "module": "unk_autoload_0",
     "addr": 36929160,
     "size": 38,
@@ -8120,7 +8120,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337eb4",
+    "name": "msl_runtime_02337eb4",
     "module": "unk_autoload_0",
     "addr": 36929204,
     "size": 22,
@@ -8128,7 +8128,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337ed0",
+    "name": "msl_runtime_02337ed0",
     "module": "unk_autoload_0",
     "addr": 36929232,
     "size": 22,
@@ -8136,7 +8136,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337eec",
+    "name": "msl_runtime_02337eec",
     "module": "unk_autoload_0",
     "addr": 36929260,
     "size": 20,
@@ -8144,7 +8144,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337f04",
+    "name": "msl_helper_02337f04",
     "module": "unk_autoload_0",
     "addr": 36929284,
     "size": 72,
@@ -8152,7 +8152,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337f4c",
+    "name": "msl_runtime_02337f4c",
     "module": "unk_autoload_0",
     "addr": 36929356,
     "size": 70,
@@ -8160,7 +8160,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02337fa0",
+    "name": "msl_runtime_02337fa0",
     "module": "unk_autoload_0",
     "addr": 36929440,
     "size": 128,
@@ -8168,7 +8168,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338020",
+    "name": "msl_runtime_02338020",
     "module": "unk_autoload_0",
     "addr": 36929568,
     "size": 84,
@@ -8176,7 +8176,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338074",
+    "name": "msl_helper_02338074",
     "module": "unk_autoload_0",
     "addr": 36929652,
     "size": 42,
@@ -8184,7 +8184,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023380a0",
+    "name": "msl_stub_023380a0",
     "module": "unk_autoload_0",
     "addr": 36929696,
     "size": 16,
@@ -8192,7 +8192,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023380b0",
+    "name": "msl_runtime_023380b0",
     "module": "unk_autoload_0",
     "addr": 36929712,
     "size": 234,
@@ -8200,7 +8200,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023381a8",
+    "name": "msl_stub_023381a8",
     "module": "unk_autoload_0",
     "addr": 36929960,
     "size": 4,
@@ -8208,7 +8208,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023381ac",
+    "name": "msl_helper_023381ac",
     "module": "unk_autoload_0",
     "addr": 36929964,
     "size": 32,
@@ -8216,7 +8216,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023381cc",
+    "name": "msl_runtime_023381cc",
     "module": "unk_autoload_0",
     "addr": 36929996,
     "size": 42,
@@ -8224,7 +8224,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023381f8",
+    "name": "msl_runtime_023381f8",
     "module": "unk_autoload_0",
     "addr": 36930040,
     "size": 4,
@@ -8232,7 +8232,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023382ac",
+    "name": "msl_runtime_023382ac",
     "module": "unk_autoload_0",
     "addr": 36930220,
     "size": 66,
@@ -8240,7 +8240,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023382f8",
+    "name": "msl_runtime_023382f8",
     "module": "unk_autoload_0",
     "addr": 36930296,
     "size": 32,
@@ -8248,7 +8248,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233831c",
+    "name": "msl_runtime_0233831c",
     "module": "unk_autoload_0",
     "addr": 36930332,
     "size": 110,
@@ -8256,7 +8256,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338390",
+    "name": "msl_runtime_02338390",
     "module": "unk_autoload_0",
     "addr": 36930448,
     "size": 174,
@@ -8264,7 +8264,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233844c",
+    "name": "msl_runtime_0233844c",
     "module": "unk_autoload_0",
     "addr": 36930636,
     "size": 26,
@@ -8272,7 +8272,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233846c",
+    "name": "msl_runtime_0233846c",
     "module": "unk_autoload_0",
     "addr": 36930668,
     "size": 98,
@@ -8280,7 +8280,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023384d0",
+    "name": "msl_runtime_023384d0",
     "module": "unk_autoload_0",
     "addr": 36930768,
     "size": 64,
@@ -8288,7 +8288,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338510",
+    "name": "msl_runtime_02338510",
     "module": "unk_autoload_0",
     "addr": 36930832,
     "size": 582,
@@ -8296,7 +8296,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233879c",
+    "name": "msl_runtime_0233879c",
     "module": "unk_autoload_0",
     "addr": 36931484,
     "size": 280,
@@ -8304,7 +8304,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023388b4",
+    "name": "msl_runtime_023388b4",
     "module": "unk_autoload_0",
     "addr": 36931764,
     "size": 84,
@@ -8312,7 +8312,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338908",
+    "name": "msl_runtime_02338908",
     "module": "unk_autoload_0",
     "addr": 36931848,
     "size": 84,
@@ -8320,7 +8320,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233895c",
+    "name": "msl_runtime_0233895c",
     "module": "unk_autoload_0",
     "addr": 36931932,
     "size": 192,
@@ -8328,7 +8328,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338a20",
+    "name": "msl_runtime_02338a20",
     "module": "unk_autoload_0",
     "addr": 36932128,
     "size": 26,
@@ -8336,7 +8336,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338a3c",
+    "name": "msl_runtime_02338a3c",
     "module": "unk_autoload_0",
     "addr": 36932156,
     "size": 24,
@@ -8344,7 +8344,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338a54",
+    "name": "msl_runtime_02338a54",
     "module": "unk_autoload_0",
     "addr": 36932180,
     "size": 50,
@@ -8352,7 +8352,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338a88",
+    "name": "msl_runtime_02338a88",
     "module": "unk_autoload_0",
     "addr": 36932232,
     "size": 60,
@@ -8360,7 +8360,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338ac8",
+    "name": "msl_runtime_02338ac8",
     "module": "unk_autoload_0",
     "addr": 36932296,
     "size": 56,
@@ -8368,7 +8368,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338c74",
+    "name": "msl_runtime_02338c74",
     "module": "unk_autoload_0",
     "addr": 36932724,
     "size": 62,
@@ -8376,7 +8376,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338cbc",
+    "name": "msl_helper_02338cbc",
     "module": "unk_autoload_0",
     "addr": 36932796,
     "size": 164,
@@ -8384,7 +8384,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338d6c",
+    "name": "msl_runtime_02338d6c",
     "module": "unk_autoload_0",
     "addr": 36932972,
     "size": 90,
@@ -8392,7 +8392,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338dcc",
+    "name": "msl_runtime_02338dcc",
     "module": "unk_autoload_0",
     "addr": 36933068,
     "size": 40,
@@ -8400,7 +8400,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338df8",
+    "name": "msl_formatted_io_02338df8",
     "module": "unk_autoload_0",
     "addr": 36933112,
     "size": 366,
@@ -8408,7 +8408,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02338f74",
+    "name": "msl_runtime_02338f74",
     "module": "unk_autoload_0",
     "addr": 36933492,
     "size": 166,
@@ -8416,7 +8416,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339024",
+    "name": "msl_stub_02339024",
     "module": "unk_autoload_0",
     "addr": 36933668,
     "size": 10,
@@ -8424,7 +8424,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339034",
+    "name": "msl_runtime_02339034",
     "module": "unk_autoload_0",
     "addr": 36933684,
     "size": 34,
@@ -8432,7 +8432,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233905c",
+    "name": "msl_runtime_0233905c",
     "module": "unk_autoload_0",
     "addr": 36933724,
     "size": 32,
@@ -8440,7 +8440,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339084",
+    "name": "msl_runtime_02339084",
     "module": "unk_autoload_0",
     "addr": 36933764,
     "size": 40,
@@ -8448,7 +8448,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023390c0",
+    "name": "msl_runtime_023390c0",
     "module": "unk_autoload_0",
     "addr": 36933824,
     "size": 22,
@@ -8456,7 +8456,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023390dc",
+    "name": "msl_helper_023390dc",
     "module": "unk_autoload_0",
     "addr": 36933852,
     "size": 80,
@@ -8464,7 +8464,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023391a0",
+    "name": "msl_runtime_023391a0",
     "module": "unk_autoload_0",
     "addr": 36934048,
     "size": 70,
@@ -8472,7 +8472,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023391f4",
+    "name": "msl_helper_023391f4",
     "module": "unk_autoload_0",
     "addr": 36934132,
     "size": 78,
@@ -8480,7 +8480,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339250",
+    "name": "msl_runtime_02339250",
     "module": "unk_autoload_0",
     "addr": 36934224,
     "size": 60,
@@ -8488,7 +8488,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339298",
+    "name": "msl_runtime_02339298",
     "module": "unk_autoload_0",
     "addr": 36934296,
     "size": 30,
@@ -8496,7 +8496,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023392c0",
+    "name": "msl_runtime_023392c0",
     "module": "unk_autoload_0",
     "addr": 36934336,
     "size": 52,
@@ -8504,7 +8504,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023392f8",
+    "name": "msl_runtime_023392f8",
     "module": "unk_autoload_0",
     "addr": 36934392,
     "size": 24,
@@ -8512,7 +8512,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339318",
+    "name": "msl_runtime_02339318",
     "module": "unk_autoload_0",
     "addr": 36934424,
     "size": 88,
@@ -8520,7 +8520,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339374",
+    "name": "msl_runtime_02339374",
     "module": "unk_autoload_0",
     "addr": 36934516,
     "size": 24,
@@ -8528,7 +8528,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339394",
+    "name": "msl_runtime_02339394",
     "module": "unk_autoload_0",
     "addr": 36934548,
     "size": 26,
@@ -8536,7 +8536,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023393b0",
+    "name": "msl_runtime_023393b0",
     "module": "unk_autoload_0",
     "addr": 36934576,
     "size": 32,
@@ -8544,7 +8544,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023393e0",
+    "name": "msl_runtime_023393e0",
     "module": "unk_autoload_0",
     "addr": 36934624,
     "size": 14,
@@ -8552,7 +8552,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023393f0",
+    "name": "msl_runtime_023393f0",
     "module": "unk_autoload_0",
     "addr": 36934640,
     "size": 30,
@@ -8560,7 +8560,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339410",
+    "name": "msl_runtime_02339410",
     "module": "unk_autoload_0",
     "addr": 36934672,
     "size": 66,
@@ -8568,7 +8568,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339454",
+    "name": "msl_helper_02339454",
     "module": "unk_autoload_0",
     "addr": 36934740,
     "size": 24,
@@ -8576,7 +8576,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233946c",
+    "name": "msl_runtime_0233946c",
     "module": "unk_autoload_0",
     "addr": 36934764,
     "size": 112,
@@ -8584,7 +8584,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023394e4",
+    "name": "msl_formatted_io_023394e4",
     "module": "unk_autoload_0",
     "addr": 36934884,
     "size": 440,
@@ -8592,7 +8592,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023396c0",
+    "name": "msl_helper_023396c0",
     "module": "unk_autoload_0",
     "addr": 36935360,
     "size": 178,
@@ -8600,7 +8600,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339780",
+    "name": "msl_runtime_02339780",
     "module": "unk_autoload_0",
     "addr": 36935552,
     "size": 20,
@@ -8608,7 +8608,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339794",
+    "name": "msl_stub_02339794",
     "module": "unk_autoload_0",
     "addr": 36935572,
     "size": 14,
@@ -8616,7 +8616,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023397a8",
+    "name": "msl_runtime_023397a8",
     "module": "unk_autoload_0",
     "addr": 36935592,
     "size": 86,
@@ -8624,7 +8624,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339800",
+    "name": "msl_runtime_02339800",
     "module": "unk_autoload_0",
     "addr": 36935680,
     "size": 54,
@@ -8632,7 +8632,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339838",
+    "name": "msl_runtime_02339838",
     "module": "unk_autoload_0",
     "addr": 36935736,
     "size": 20,
@@ -8640,7 +8640,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233984c",
+    "name": "msl_runtime_0233984c",
     "module": "unk_autoload_0",
     "addr": 36935756,
     "size": 18,
@@ -8648,7 +8648,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339864",
+    "name": "msl_runtime_02339864",
     "module": "unk_autoload_0",
     "addr": 36935780,
     "size": 16,
@@ -8656,7 +8656,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339890",
+    "name": "msl_runtime_02339890",
     "module": "unk_autoload_0",
     "addr": 36935824,
     "size": 8,
@@ -8664,7 +8664,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023398a0",
+    "name": "msl_runtime_023398a0",
     "module": "unk_autoload_0",
     "addr": 36935840,
     "size": 8,
@@ -8672,7 +8672,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023398b0",
+    "name": "msl_runtime_023398b0",
     "module": "unk_autoload_0",
     "addr": 36935856,
     "size": 66,
@@ -8680,7 +8680,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339908",
+    "name": "msl_runtime_02339908",
     "module": "unk_autoload_0",
     "addr": 36935944,
     "size": 56,
@@ -8688,7 +8688,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339948",
+    "name": "msl_runtime_02339948",
     "module": "unk_autoload_0",
     "addr": 36936008,
     "size": 78,
@@ -8696,7 +8696,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_0233999c",
+    "name": "msl_runtime_0233999c",
     "module": "unk_autoload_0",
     "addr": 36936092,
     "size": 28,
@@ -8704,7 +8704,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_023399c0",
+    "name": "msl_runtime_023399c0",
     "module": "unk_autoload_0",
     "addr": 36936128,
     "size": 92,
@@ -8712,7 +8712,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339a24",
+    "name": "msl_runtime_02339a24",
     "module": "unk_autoload_0",
     "addr": 36936228,
     "size": 28,
@@ -8720,7 +8720,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339a48",
+    "name": "msl_runtime_02339a48",
     "module": "unk_autoload_0",
     "addr": 36936264,
     "size": 114,
@@ -8728,7 +8728,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339ac0",
+    "name": "msl_runtime_02339ac0",
     "module": "unk_autoload_0",
     "addr": 36936384,
     "size": 28,
@@ -8736,7 +8736,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e00",
+    "name": "msl_runtime_02339e00",
     "module": "unk_autoload_0",
     "addr": 36937216,
     "size": 70,
@@ -8744,7 +8744,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e54",
+    "name": "msl_runtime_02339e54",
     "module": "unk_autoload_0",
     "addr": 36937300,
     "size": 20,
@@ -8752,7 +8752,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e6c",
+    "name": "msl_runtime_02339e6c",
     "module": "unk_autoload_0",
     "addr": 36937324,
     "size": 6,
@@ -8760,7 +8760,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e78",
+    "name": "msl_runtime_02339e78",
     "module": "unk_autoload_0",
     "addr": 36937336,
     "size": 6,
@@ -8768,7 +8768,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e84",
+    "name": "msl_runtime_02339e84",
     "module": "unk_autoload_0",
     "addr": 36937348,
     "size": 6,
@@ -8776,7 +8776,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339e90",
+    "name": "msl_runtime_02339e90",
     "module": "unk_autoload_0",
     "addr": 36937360,
     "size": 6,
@@ -8784,7 +8784,7 @@
     "reason": "Metrowerks Runtime/Math Section (0x02332800 - 0x0234FFFF)"
   },
   {
-    "name": "MSL_02339ebc",
+    "name": "msl_runtime_02339ebc",
     "module": "unk_autoload_0",
     "addr": 36937404,
     "size": 96,
