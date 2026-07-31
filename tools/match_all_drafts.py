@@ -84,7 +84,9 @@ for ddir in draft_dirs:
             # Promote matched file from drafts/ to src/ via git mv!
             dst_path = os.path.join(target_src_dir, fname)
             os.makedirs(target_src_dir, exist_ok=True)
-            subprocess.run(['git', 'mv', path, dst_path], check=True)
+            res_mv = subprocess.run(['git', 'mv', path, dst_path], capture_output=True)
+            if res_mv.returncode != 0:
+                os.rename(path, dst_path)
             matched_count += 1
             promoted_files.append((fname, dst_path))
             print(f"  [100% MATCH PROMOTED TO SRC] {fname} -> {dst_path}")
