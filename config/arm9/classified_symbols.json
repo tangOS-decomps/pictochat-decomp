@@ -1624,7 +1624,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_0232517c",
+    "name": "Palette_InitBounds",
     "module": "unk_autoload_0",
     "addr": 36852092,
     "size": 16,
@@ -1640,7 +1640,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_0232519c",
+    "name": "Palette_StepAnimation",
     "module": "unk_autoload_0",
     "addr": 36852124,
     "size": 40,
@@ -1648,7 +1648,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_023251c4",
+    "name": "Palette_ResetState",
     "module": "unk_autoload_0",
     "addr": 36852164,
     "size": 8,
@@ -1664,7 +1664,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_023251e4",
+    "name": "Palette_GetActiveColor",
     "module": "unk_autoload_0",
     "addr": 36852196,
     "size": 4,
@@ -2488,7 +2488,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02329628",
+    "name": "TextLayout_DrawText",
     "module": "unk_autoload_0",
     "addr": 36869672,
     "size": 10,
@@ -2496,7 +2496,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02329634",
+    "name": "TextLayout_DrawGlyph",
     "module": "unk_autoload_0",
     "addr": 36869684,
     "size": 10,
@@ -2504,7 +2504,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02329640",
+    "name": "TextLayout_SetFont",
     "module": "unk_autoload_0",
     "addr": 36869696,
     "size": 14,
@@ -2512,7 +2512,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02329650",
+    "name": "TextLayout_SetSpacing",
     "module": "unk_autoload_0",
     "addr": 36869712,
     "size": 12,
@@ -2520,7 +2520,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_0232965c",
+    "name": "TextLayout_SetLineHeight",
     "module": "unk_autoload_0",
     "addr": 36869724,
     "size": 12,
@@ -5360,7 +5360,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02330558",
+    "name": "Wireless_GetActivePeerSlot",
     "module": "unk_autoload_0",
     "addr": 36898136,
     "size": 42,
@@ -5368,7 +5368,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_02330584",
+    "name": "Wireless_ResetState",
     "module": "unk_autoload_0",
     "addr": 36898180,
     "size": 12,
@@ -5392,7 +5392,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_023305c8",
+    "name": "Wireless_IncrementSequenceNumber",
     "module": "unk_autoload_0",
     "addr": 36898248,
     "size": 14,
@@ -5400,7 +5400,7 @@
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
   {
-    "name": "FUN_023305d8",
+    "name": "Wireless_IsSequenceComplete",
     "module": "unk_autoload_0",
     "addr": 36898264,
     "size": 16,
