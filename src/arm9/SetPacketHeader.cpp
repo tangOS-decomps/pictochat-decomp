@@ -1,7 +1,7 @@
-// decomp: module=unk_autoload_0 addr=0x02336444 name=FUN_02336444
+// decomp: module=unk_autoload_0 addr=0x02336444 name=SetPacketHeader
 // Contributed by opie-x (TangOS Discord): AI-assisted candidate (local
 // checkpoints/final-v1 model), verified byte-exact via tools/match.py.
-void FUN_02336444(unsigned short *p, int a, int b)
+void SetPacketHeader(unsigned short *p, int a, int b)
 {
     if (b < 0) {
         p[0] = 0xc0 | a;

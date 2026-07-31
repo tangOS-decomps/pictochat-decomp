@@ -1,4 +1,4 @@
-// decomp: module=unk_autoload_0 addr=0x02332d10 name=FUN_02332d10
+// decomp: module=unk_autoload_0 addr=0x02332d10 name=SVC_WaitByLoop
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline (NitroSDK/TwlSDK-style
 // "SVC_xxx" BIOS-call wrapper) - the instruction IS the whole specification,
 // no separate C shape to lose. Part of a family of one-instruction-per-
@@ -12,7 +12,7 @@
 // the literal word "asm" in the source) is wrong for this Thumb-mode
 // function, so verifying/rebuilding it needs an explicit --flags with
 // -thumb kept in, not the bare --version default.
-asm void FUN_02332d10(void) {
+asm void SVC_WaitByLoop(void) {
     swi 0x3
     bx lr
 }

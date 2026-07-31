@@ -1,8 +1,8 @@
-// decomp: module=unk_autoload_0 addr=0x02332d4e name=FUN_02332d4e
+// decomp: module=unk_autoload_0 addr=0x02332d42 name=SVC_IsDebuggerPresent
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void FUN_02332d4e(void) {
-    swi 0x13
+asm void SVC_IsDebuggerPresent(void) {
+    swi 0x10
     bx lr
 }
