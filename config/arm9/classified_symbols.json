@@ -259,7 +259,7 @@
     "name": "FUN_02320e14",
     "module": "unk_autoload_0",
     "addr": 36834836,
-    "size": 38,
+    "size": "0x26",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -267,7 +267,7 @@
     "name": "FUN_02320e3c",
     "module": "unk_autoload_0",
     "addr": 36834876,
-    "size": 36,
+    "size": "0x24",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -275,7 +275,7 @@
     "name": "FUN_02320e60",
     "module": "unk_autoload_0",
     "addr": 36834912,
-    "size": 40,
+    "size": "0x28",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -283,7 +283,7 @@
     "name": "FUN_02320e88",
     "module": "unk_autoload_0",
     "addr": 36834952,
-    "size": 36,
+    "size": "0x24",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -291,7 +291,7 @@
     "name": "FUN_02320eac",
     "module": "unk_autoload_0",
     "addr": 36834988,
-    "size": 40,
+    "size": "0x28",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -299,7 +299,7 @@
     "name": "FUN_02320ed4",
     "module": "unk_autoload_0",
     "addr": 36835028,
-    "size": 42,
+    "size": "0x2a",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -307,7 +307,7 @@
     "name": "FUN_02320f00",
     "module": "unk_autoload_0",
     "addr": 36835072,
-    "size": 36,
+    "size": "0x24",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -315,7 +315,7 @@
     "name": "FUN_02320f24",
     "module": "unk_autoload_0",
     "addr": 36835108,
-    "size": 40,
+    "size": "0x28",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -323,7 +323,7 @@
     "name": "FUN_02320f4c",
     "module": "unk_autoload_0",
     "addr": 36835148,
-    "size": 38,
+    "size": "0x26",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -331,7 +331,7 @@
     "name": "FUN_02320f74",
     "module": "unk_autoload_0",
     "addr": 36835188,
-    "size": 42,
+    "size": "0x2a",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
