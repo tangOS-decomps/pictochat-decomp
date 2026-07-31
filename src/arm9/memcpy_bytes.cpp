@@ -1,4 +1,6 @@
-// decomp: module=unk_autoload_0 addr=0x02332df4 name=FUN_02332df4
+//cpp
+extern "C" {
+// decomp: module=unk_autoload_0 addr=0x02332df4 name=memcpy_bytes
 // A memcpy-style byte copy (dst, src, n) that returns the original dst
 // pointer, like libc memcpy - hence a separate walking pointer `d` (not
 // mutating `dst` itself) so r0 is left untouched by the loop and still
@@ -8,7 +10,7 @@
 // the incrementing src pointer - that's just how a plain `*src++` compiles
 // here for a signed-char source, not anything the source needs to spell
 // out.
-void *FUN_02332df4(char *dst, char *src, unsigned int n) {
+void *memcpy_bytes(char *dst, char *src, unsigned int n) {
     char *d = dst;
     if (n != 0) {
         do {
@@ -16,4 +18,6 @@ void *FUN_02332df4(char *dst, char *src, unsigned int n) {
         } while (--n != 0);
     }
     return dst;
+}
+
 }
