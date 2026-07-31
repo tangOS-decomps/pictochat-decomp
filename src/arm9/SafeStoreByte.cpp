@@ -1,3 +1,5 @@
+//cpp
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x02332d84 name=SafeStoreByte
 int SafeStoreByte(char *ptr, char val) {
     if (ptr == 0) {
@@ -5,4 +7,6 @@ int SafeStoreByte(char *ptr, char val) {
     }
     *ptr = val;
     return 1;
+}
+
 }

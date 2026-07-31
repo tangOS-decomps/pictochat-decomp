@@ -1,3 +1,5 @@
+//cpp
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x02332e38 name=memcmp
 // memcmp-style ordering comparator: returns 0 if the first n bytes of p0/p1
 // are equal, else -1/1 by unsigned byte magnitude at the first mismatch
@@ -18,4 +20,6 @@ int memcmp(unsigned char *p0, unsigned char *p1, unsigned int n) {
         } while (--n != 0);
     }
     return 0;
+}
+
 }

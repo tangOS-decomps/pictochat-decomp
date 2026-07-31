@@ -1,3 +1,5 @@
+//cpp
+extern "C" {
 // ==========================================================
 // C++ Class Implementation: PacketHeader
 // ==========================================================
@@ -17,3 +19,5 @@ void SetPacketHeader(unsigned short *p, int a, int b)
     }
 }
 
+
+}

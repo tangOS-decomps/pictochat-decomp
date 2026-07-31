@@ -17,7 +17,7 @@
 // the literal word "asm" in the source) is wrong for this Thumb-mode
 // function, so verifying/rebuilding it needs an explicit --flags with
 // -thumb kept in, not the bare --version default.
-asm void SVC_WaitByLoop(void) {
+extern "C" asm void SVC_WaitByLoop(void) {
     swi 0x3
     bx lr
 }
@@ -27,7 +27,7 @@ asm void SVC_WaitByLoop(void) {
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void SVC_CpuSet(void) {
+extern "C" asm void SVC_CpuSet(void) {
     swi 0xb
     bx lr
 }
@@ -37,7 +37,7 @@ asm void SVC_CpuSet(void) {
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void SVC_FastCopy(void) {
+extern "C" asm void SVC_FastCopy(void) {
     swi 0xc
     bx lr
 }
@@ -47,7 +47,7 @@ asm void SVC_FastCopy(void) {
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void SVC_GetCRC16(void) {
+extern "C" asm void SVC_GetCRC16(void) {
     swi 0xe
     bx lr
 }
@@ -57,7 +57,7 @@ asm void SVC_GetCRC16(void) {
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void SVC_IsDebuggerPresent(void) {
+extern "C" asm void SVC_IsDebuggerPresent(void) {
     swi 0x10
     bx lr
 }
@@ -67,7 +67,7 @@ asm void SVC_IsDebuggerPresent(void) {
 // HAND-ASM PRIMITIVE: bare SWI/SVC syscall trampoline, sibling of
 // FUN_02332d10 (see its comment for the full rationale and the mwccarm
 // asm-syntax/--flags gotchas).
-asm void SVC_CustomCall(void) {
+extern "C" asm void SVC_CustomCall(void) {
     swi 0x13
     bx lr
 }

@@ -1,3 +1,5 @@
+//cpp
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x02332e1c name=memchr
 // memchr-style byte search: scans n bytes from s for the byte value c,
 // returning a pointer to the first match or NULL. The `if (n != 0) { do
@@ -15,4 +17,6 @@ void *memchr(unsigned char *s, int c, unsigned int n) {
         } while (--n != 0);
     }
     return 0;
+}
+
 }

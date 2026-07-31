@@ -1,3 +1,5 @@
+//cpp
+extern "C" {
 // ==========================================================
 // C++ Class Implementation: ChatContext
 // ==========================================================
@@ -20,3 +22,5 @@ int InvokeSystemCallback(int a) {
     return FUN_023374f0(a, 0, 0x24);
 }
 
+
+}
