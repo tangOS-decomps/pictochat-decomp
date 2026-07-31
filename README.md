@@ -11,8 +11,8 @@ turned up as a DSi system utility.
 ## Status
 
 <!-- progress:start -->
-**132 / 1551 functions matched (8.5%)**  `[#-------------------]`
-2508 / 167020 bytes (1.5%)
+**133 / 1551 functions matched (8.6%)**  `[#-------------------]`
+2550 / 167020 bytes (1.5%)
 <!-- progress:end -->
 
 (regenerate with `python tools/progress.py --write-readme`; needs a local
