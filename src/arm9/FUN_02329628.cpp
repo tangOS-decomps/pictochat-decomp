@@ -1,9 +1,0 @@
-//cpp
-extern "C" {
-// decomp: module=unk_autoload_0 addr=0x02329628 name=FUN_02329628
-extern int FUN_02329668(int a, int b, int c, int code);
-int FUN_02329628(int a, int b, int c) {
-    return FUN_02329668(a, b, c, 5);
-}
-
-}
