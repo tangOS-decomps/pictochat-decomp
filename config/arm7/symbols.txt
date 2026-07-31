@@ -224,7 +224,7 @@ name=FUN_022d0798 module=arm7 addr=0x022d0798 size=0x58
 name=FUN_022d07f4 module=arm7 addr=0x022d07f4 size=0x80
 name=FUN_022d0878 module=arm7 addr=0x022d0878 size=0x10
 name=FUN_022d0890 module=arm7 addr=0x022d0890 size=0x10
-name=FUN_022d08a8 module=arm7 addr=0x022d08a8 size=0x10
+name=FUN_022d08a8 module=arm7 addr=0x022d08a8 size=0x14
 name=FUN_022d08bc module=arm7 addr=0x022d08bc size=0x10
 name=FUN_022d08d4 module=arm7 addr=0x022d08d4 size=0x10
 name=FUN_022d08ec module=arm7 addr=0x022d08ec size=0x10
