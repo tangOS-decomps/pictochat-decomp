@@ -707,7 +707,7 @@
     "name": "FUN_02321d14",
     "module": "unk_autoload_0",
     "addr": 36838676,
-    "size": 8,
+    "size": "0xc",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -2315,7 +2315,7 @@
     "name": "FUN_02328d60",
     "module": "unk_autoload_0",
     "addr": 36867424,
-    "size": 26,
+    "size": "0x20",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
