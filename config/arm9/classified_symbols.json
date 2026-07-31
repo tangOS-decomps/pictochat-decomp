@@ -939,7 +939,7 @@
     "name": "FUN_0232254c",
     "module": "unk_autoload_0",
     "addr": 36840780,
-    "size": 4,
+    "size": "0x8",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -1059,7 +1059,7 @@
     "name": "FUN_02322b78",
     "module": "unk_autoload_0",
     "addr": 36842360,
-    "size": 6,
+    "size": "0xc",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -1067,7 +1067,7 @@
     "name": "FUN_02322b84",
     "module": "unk_autoload_0",
     "addr": 36842372,
-    "size": 6,
+    "size": "0xc",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -1307,7 +1307,7 @@
     "name": "FUN_02323458",
     "module": "unk_autoload_0",
     "addr": 36844632,
-    "size": 8,
+    "size": "0xc",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
@@ -1323,7 +1323,7 @@
     "name": "FUN_023234b4",
     "module": "unk_autoload_0",
     "addr": 36844724,
-    "size": 6,
+    "size": "0xc",
     "category": "APP",
     "reason": "PictoChat Application Logic (< 0x02332800)"
   },
