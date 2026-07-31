@@ -1,0 +1,48 @@
+{
+  "tangosVersion": "1",
+  "project": {
+    "name": "pictochat-decomp",
+    "title": "PictoChat",
+    "tagline": "byte-matching the DSi's chat app, function by function",
+    "github": "https://github.com/tangOS-decomps/pictochat-decomp",
+    "language": "C",
+    "platform": "nds",
+    "compiler": "mwccarm (CodeWarrior for embedded ARM), a dsi/ build - version NOT yet pinned. Sweep the dsi builds (dsi/1.1, 1.1p1, 1.2, 1.2p1, 1.2p2, 1.3, 1.3p1, 1.6sp1, 1.6sp2); dsi/1.3 is the working guess for a 2009 launch-window system title. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
+    "cppNote": "If a name starts with _Z (C++ mangled), write C++ with the FIRST LINE exactly //cpp - the build compiles a src file as C++ when its first line is //cpp, else as c99.",
+    "setup": "clone {github} and follow CONTRIBUTING.md. You bring your own dumps (nothing copyrighted is in the repo): your own DSi PictoChat title (assets/pictochat.nds) and your own ARM7 BIOS (assets/bios7.bin). Set up mwccarm (a dsi build) per notes/setup-mwccarm.md, `pip install ndspy capstone pyelftools pyghidra`, then `python tools/extract_pictochat.py` to populate extracted/.",
+    "verifyCommand": "python tools/match.py --c yourfile.c --func {name} --addr 0x{addrHex} --size 0x{sizeHex} --module {module} --trio",
+    "readFirst": "notes/matching-style.md (matching levers + known walls), notes/tooling.md (the tool suite), and notes/pictochat-layout.md (why the total is Ghidra's estimate, not dsd's). Coordinate your span in CLAIMS.md.",
+    "submitting": "Before opening a PR read CONTRIBUTING.md. Every file you add to src/ MUST byte-reproduce the binary (tools/match.py green) - that is the only merge gate. One matched function per src/arm9/<symbol>.c|.cpp or src/arm7/<symbol>.c|.cpp (first line //cpp for C++). Claim your span in CLAIMS.md first. A logic-correct but NOT byte-exact draft is parked with a `// NONMATCHING:` marker via tools/nonmatching.py - it does not count as matched and must not be presented as a match. Before hand-writing anything, try the free tiers: `python tools/sync_ledger.py --apply` then `python tools/cross_match.py --other-repo ../sm64ds-decomp` (cross-project + template matching has already landed dozens with no hand-writing).",
+    "rules": "only your own legally dumped DSi title and BIOS; never commit the ROM, the BIOS, firmware, or anything extracted/derived from them (see .gitignore) - the repo holds only original work: scripts, hand-written C, notes. Import struct/field knowledge (see CREDITS) but write all C from scratch.",
+    "nearMissNote": "If a function will not fully match after real effort, do not discard your best attempt - keep the closest compiling draft parked as NONMATCHING (tools/nonmatching.py); it is the highest-yield starting point for a later match, and most matches now start from someone's stored draft or a cross-project hit.",
+    "matchConventions": {
+      "srcLayout": "src/arm9/<symbol>.c|.cpp and src/arm7/<symbol>.c|.cpp, one matched function each",
+      "decompMarker": "each src file carries a `// decomp: <module> <addr>` marker (tools/ledger.py MARKER_RE) that ties it to a function address",
+      "ledger": "tools/ledger.py + tools/sync_ledger.py (marker-based, catches committed src/ up)",
+      "nonMatching": "tools/nonmatching.py parks logic-correct, not-byte-exact drafts with a `// NONMATCHING:` marker",
+      "crossProject": "tools/cross_match.py --other-repo ../sm64ds-decomp",
+      "drafts": "tools/ghidra_draft.py, tools/m2c_draft.py, tools/permuter/",
+      "canonicalVersion": "dsi/1.3 (unconfirmed)"
+    },
+    "modules": ["main", "itcm", "unk_autoload_0", "unk_autoload_2", "arm7"],
+    "progressNote": "Matched function COUNT is computable from committed src/ alone; the TOTAL count and percentage come from Ghidra's function estimate (extracted/, git-ignored, ROM-derived), so a precise percentage needs a local extracted/ - see notes/pictochat-layout.md. dsd's own function search does not finish for this title."
+  },
+  "runtime": {
+    "cwd": ".",
+    "python": "python",
+    "shell": false,
+    "envKeys": [
+      "GITHUB_TOKEN",
+      "ANTHROPIC_API_KEY"
+    ],
+    "envKeyHelp": {
+      "GITHUB_TOKEN": {
+        "note": "Read-only GitHub token. Raises the API rate limit (anonymous is 60/hr) so contributor stats and PR-based match attribution work. A fine-grained token with public-repo read access is enough - stored encrypted on your machine, never shared.",
+        "url": "https://github.com/settings/tokens?type=beta"
+      },
+      "ANTHROPIC_API_KEY": {
+        "note": "Only if you drive the model-assisted draft tools (tools/m2c_draft.py, tools/ghidra_draft.py, the permuter loop) over the API instead of from an editor session."
+      }
+    }
+  }
+}
