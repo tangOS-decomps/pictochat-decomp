@@ -4,8 +4,8 @@
 
 // --- memset.cpp ---
 //cpp
-// decomp: module=unk_autoload_0 addr=0x02332e70 name=FUN_02332e70
-extern "C" void FUN_02332e70(unsigned char *dst, int c, unsigned int n) {
+// decomp: module=unk_autoload_0 addr=0x02332e70 name=memset
+extern "C" void memset(unsigned char *dst, int c, unsigned int n) {
     unsigned int val = (unsigned char)c;
 
     if (n >= 0x20) {
