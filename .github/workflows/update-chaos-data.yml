@@ -1,0 +1,55 @@
+# On every push to main, regenerate chaos-db.json from committed data (no ROM) and
+# land it on the chaos-data branch, so the hosted viewer and the tangos.dev card
+# self-update. Mirrors sm64ds-decomp's workflow, trimmed to just the data publish
+# (no treemap / README bar / provenance yet - those need the local ROM tooling).
+#
+# The chaos-data branch must already exist (seeded once as an orphan branch holding
+# chaos-db.json). tangos.dev's romstats-sync reads chaos-db.json's `stats` block from
+# that branch to publish /api/rom-stats.
+name: update-chaos-data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "config/**"
+      - "tools/chaos_db_ci.py"
+      - ".github/workflows/update-chaos-data.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chaos-data
+  cancel-in-progress: true
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    # The refresh commit lands on chaos-data, not main, so it never retriggers this
+    # workflow - but guard anyway, cheap insurance against a loop.
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: chaos-data
+          path: _chaos_data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate chaos-db.json (committed data only, no ROM)
+        run: python tools/chaos_db_ci.py --out _chaos_data/chaos-db.json
+      - name: Push if changed
+        run: |
+          cd _chaos_data
+          if git diff --quiet -- chaos-db.json; then
+            echo "no data change"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chaos-db.json
+          git commit -m "Refresh progress data from $(git -C .. rev-parse --short HEAD)"
+          git push origin chaos-data
