@@ -12,7 +12,7 @@ name=FUN_02000f60 module=main addr=0x02000f60 size=0x4
 name=FUN_02320000 module=unk_autoload_0 addr=0x02320000 size=0x166
 name=FUN_023201fc module=unk_autoload_0 addr=0x023201fc size=0x8e
 name=FUN_023202b0 module=unk_autoload_0 addr=0x023202b0 size=0x3a8
-name=FUN_02320728 module=unk_autoload_0 addr=0x02320728 size=0x1a
+name=FUN_02320728 module=unk_autoload_0 addr=0x02320728 size=0x24
 name=FUN_0232074c module=unk_autoload_0 addr=0x0232074c size=0x1a4
 name=FUN_02320938 module=unk_autoload_0 addr=0x02320938 size=0x38
 name=FUN_02320978 module=unk_autoload_0 addr=0x02320978 size=0xa
@@ -287,7 +287,7 @@ name=FUN_02327d68 module=unk_autoload_0 addr=0x02327d68 size=0x3e
 name=FUN_02327dac module=unk_autoload_0 addr=0x02327dac size=0x62
 name=FUN_02327e20 module=unk_autoload_0 addr=0x02327e20 size=0x56
 name=FUN_02327e80 module=unk_autoload_0 addr=0x02327e80 size=0xd3c
-name=FUN_02328ce4 module=unk_autoload_0 addr=0x02328ce4 size=0x1e
+name=FUN_02328ce4 module=unk_autoload_0 addr=0x02328ce4 size=0x24
 name=FUN_02328d08 module=unk_autoload_0 addr=0x02328d08 size=0x4c
 name=FUN_02328d60 module=unk_autoload_0 addr=0x02328d60 size=0x20
 name=FUN_02328d80 module=unk_autoload_0 addr=0x02328d80 size=0x1e
