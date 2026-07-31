@@ -45,7 +45,7 @@ name=FUN_02320f74 module=unk_autoload_0 addr=0x02320f74 size=0x2a
 name=FUN_02320fa0 module=unk_autoload_0 addr=0x02320fa0 size=0x82
 name=FUN_0232102c module=unk_autoload_0 addr=0x0232102c size=0x88
 name=FUN_023210c8 module=unk_autoload_0 addr=0x023210c8 size=0xc6
-name=FUN_02321198 module=unk_autoload_0 addr=0x02321198 size=0x14
+name=FUN_02321198 module=unk_autoload_0 addr=0x02321198 size=0x1c
 name=FUN_023211b4 module=unk_autoload_0 addr=0x023211b4 size=0xf6
 name=Bitmask_GetBit2 module=unk_autoload_0 addr=0x023212bc size=0xc
 name=Bitmask_GetBit3 module=unk_autoload_0 addr=0x023212c8 size=0xc
@@ -94,8 +94,8 @@ name=FUN_02321df4 module=unk_autoload_0 addr=0x02321df4 size=0x22
 name=FUN_02321e24 module=unk_autoload_0 addr=0x02321e24 size=0x3c
 name=FUN_02321e70 module=unk_autoload_0 addr=0x02321e70 size=0xe8
 name=FUN_02321f74 module=unk_autoload_0 addr=0x02321f74 size=0x24
-name=FUN_02321f9c module=unk_autoload_0 addr=0x02321f9c size=0x14
-name=FUN_02321fbc module=unk_autoload_0 addr=0x02321fbc size=0x12
+name=FUN_02321f9c module=unk_autoload_0 addr=0x02321f9c size=0x20
+name=FUN_02321fbc module=unk_autoload_0 addr=0x02321fbc size=0x18
 name=FUN_02321fd4 module=unk_autoload_0 addr=0x02321fd4 size=0xc
 name=FUN_02321fe0 module=unk_autoload_0 addr=0x02321fe0 size=0xc
 name=FUN_02321fec module=unk_autoload_0 addr=0x02321fec size=0x18
@@ -114,8 +114,8 @@ name=FUN_023224b4 module=unk_autoload_0 addr=0x023224b4 size=0xc
 name=FUN_023224c4 module=unk_autoload_0 addr=0x023224c4 size=0x16
 name=FUN_023224e0 module=unk_autoload_0 addr=0x023224e0 size=0x16
 name=FUN_023224fc module=unk_autoload_0 addr=0x023224fc size=0x16
-name=FUN_02322518 module=unk_autoload_0 addr=0x02322518 size=0x8
-name=FUN_02322524 module=unk_autoload_0 addr=0x02322524 size=0x8
+name=FUN_02322518 module=unk_autoload_0 addr=0x02322518 size=0xc
+name=FUN_02322524 module=unk_autoload_0 addr=0x02322524 size=0xc
 name=FUN_02322530 module=unk_autoload_0 addr=0x02322530 size=0x16
 name=FUN_0232254c module=unk_autoload_0 addr=0x0232254c size=0x4
 name=FUN_02322554 module=unk_autoload_0 addr=0x02322554 size=0x16c
