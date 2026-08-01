@@ -2,7 +2,7 @@ name: PR link validation
 
 # Uses pull_request_target so repo secrets (the relay token) are available even
 # for fork PRs. SAFE because this workflow never checks out or runs PR code — it
-# only sends the PR number + head sha to the relay. The actual compile/linkcheck
+# only sends the PR number + immutable head/base SHAs to the relay. The actual compile/linkcheck
 # happens on the self-hosted worker behind the maintainer's NAT, sandboxed there.
 #
 # Mirrors tangosdev/sm64ds-decomp's pr-validate.yml (same relay, same worker --
@@ -41,11 +41,15 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
+          payload=$(jq -n --arg repo "$REPO" --argjson pr "$PR" \
+            --arg sha "$SHA" --arg baseSha "$BASE_SHA" \
+            '{repo:$repo,pr:$pr,sha:$sha,baseSha:$baseSha}')
           resp=$(curl -sS -X POST "$RELAY/api/pr-validate" \
             -H "X-Api-Key: $TOKEN" -H "Content-Type: application/json" \
-            -d "{\"repo\":\"$REPO\",\"pr\":$PR,\"sha\":\"$SHA\"}")
+            --data "$payload")
           echo "$resp"
           jobId=$(echo "$resp" | jq -r '.jobId // empty')
           if [ -z "$jobId" ]; then echo "relay did not return a jobId"; exit 1; fi
