@@ -479,6 +479,57 @@ Knowing the total depth already matched (not just "some diff exists")
 correctly ruled out "need another local" as the fix and pointed at register
 *pressure*, not register *count*, being the lever to pull.
 
+## tools/frame_search.py
+
+Automates the "which of these C-shape hypotheses actually reproduces the
+target's frame?" search that `frame_shape.py` diagnoses but leaves you to
+answer by hand - checking one hypothesis used to mean writing a whole new
+variant file, recompiling, and re-running `frame_shape.py --compare`, then
+repeating for the next guess. Both `FUN_022d5870` and `FUN_022d5a64`
+(see their `scratch/*_notes.md` files) needed 15-20+ hand-written variants
+each before landing on the right shape, most of them one-line changes from
+the last - exactly the kind of repetitive search a tool should do instead.
+
+Author one seed `.c` file with inline toggle markers instead of N full
+variant files:
+
+```
+@{name}[choice0|choice1|...]
+```
+
+Every occurrence sharing the same `name` toggles together (so one logical
+decision - "should this base pointer be a named local or recomputed inline
+at each use?" - can have different literal text at each of its call sites);
+an empty choice (`""`) means "omit this text entirely" for that combination,
+which is how you express "only declare this local under choice X". Different
+`@{name}` axes combine as a cartesian product, and every combination gets
+tried against both `-O4,p` and `-O4,s` automatically (`--no-opt-sweep` to
+skip that):
+
+```
+python tools/frame_search.py --seed candidate_template.c --func FUN_022d5870 \
+    --module arm7 --addr 0x022d5870 --size 0x1ec
+```
+
+Reports results sorted by distance from the target frame shape (register
+push-set + stack depth; 0 = exact match) and writes the best N to disk.
+Validated against `FUN_022d5870`'s already-hand-solved register-count
+mismatch: reproduced the known-best shape (9 registers, matching the
+target's push-set) in one ~30-second batch run covering 3 toggle axes x 2
+optimization levels, versus the ~20 individual hand iterations that took to
+find by hand originally. An exact frame match is **necessary, not
+sufficient** - it only checks the prologue shape, not the function body -
+always follow up with a real `tools/fdiff.py --align` pass on the winning
+candidate.
+
+Gotcha: a substituted choice is spliced in as raw text with no
+parenthesization added, so it inherits whatever precedence the surrounding
+characters imply - `*@{x}[qhead + 1|...]` expands to `*qhead + 1` (parses as
+`(*qhead) + 1`, not an lvalue) when you meant `*(qhead + 1)`. Caught this
+exact mistake during validation - the tool correctly reported the compile
+failure rather than silently mishandling it, but wrap multi-token choices in
+their own parens in the seed to avoid the wasted compile attempts.
+
 ## The `pop {...,pc}` fold puzzle
 
 A recurring near-miss shape: a candidate matches target instruction-for-
