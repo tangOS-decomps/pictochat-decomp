@@ -51,7 +51,7 @@ def add(args):
     if obj is None:
         sys.exit("nonmatching: candidate does not compile - fix it first, this hatch "
                   "is only for logic-correct-but-unmatchable C")
-    code, relocs = M.extract_func(obj, args.func)
+    code, relocs, _ = M.extract_func(obj, args.func)
     if code is None:
         sys.exit(f"nonmatching: symbol '{args.func}' not found in compiled object")
     ok, ndiff = M.compare(target, code, relocs, verbose=False)

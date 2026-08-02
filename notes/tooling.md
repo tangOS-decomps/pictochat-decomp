@@ -333,6 +333,56 @@ landing on it by luck. So far the whole `dsi/` family is codegen-identical
 for every construct in the default probe file - feed it something more
 unusual if you want to actually narrow the pin down.
 
+## tools/match.py never actually checked a relocation's target - only fixed this session
+
+Every relocation (a `bl` to an extern function, a pool-loaded address of an
+extern global) got wildcarded by `compare()` unconditionally - the README's
+claim that matching is "relocation-aware... a raw byte diff alone would
+wildcard a wrong callee/global sitting in a reloc slot; `tools/match.py`
+checks both" was **not actually true** until this session. Concretely: for
+`src/arm9/FUN_02320938.c` (5 extern calls, 5 extern globals), 13 of its 14
+code words are relocations - `compare()` was really only checking 1 word out
+of 14. Renaming an extern to point at a completely wrong address would still
+report MATCH, as long as the byte count and non-relocated words lined up.
+
+**Fixed, but only where the information exists to fix it.** This project's
+own convention already embeds the real address in most placeholder names
+(`FUN_<hex>`, `func_<hex>`, `G_<hex>`, ...) - `match.py` now has
+`verify_relocs()`, which parses that address back out of each relocation's
+ELF symbol name and checks it against what the *real* ROM bytes at that slot
+actually decode to: a direct compare for a data/pool relocation (`R_ARM_ABS32`
+- allowing `addr | 1` too, since a Thumb function's address stored as a
+*value* legitimately carries the ARM/Thumb interworking bit, unlike a
+`bl`'s resolved branch target, which capstone always resolves to the true
+byte address either way), or a capstone-decoded resolved branch target for a
+call relocation. `main()` now downgrades a would-be MATCH to a failure and
+prints exactly which symbol claimed which address vs. what the ROM really has
+there. Wired into every auto-banking path (`match.py`, `fdiff.py`,
+`find_duplicates.py`, `permuter/batch.py`) - `templates.py`'s generated
+candidates only ever use address-less placeholder names (`G`, `F1`, ...) so
+there's nothing for it to check there.
+
+**This can't retroactively audit most of the existing corpus** - the
+overwhelming majority of already-matched files use generic, non-address
+placeholder names (`extern int G[]; extern void F1(void);`), which is exactly
+as unverifiable as before; `verify_relocs()` silently skips anything it can't
+parse an address out of, same as the old blind wildcard. It only closes the
+gap for symbols that already claim a specific address in their own name -
+which is worth doing consistently going forward, especially on functions
+(like the largest unmatched ones) that call many still-unidentified helpers.
+
+A spot-check of the 38 committed files that do use address-encoded names
+turned up exactly 2 real issues (both fixed): `FUN_02320728.cpp` had two
+globals misnamed after the *enclosing function's own address*
+(`gBufferStart_02320728`/`gBufferEnd_02320728`) instead of their real
+addresses (`0x02348ee4`/`0x023490e4`) - byte-identical, just a misleading
+name, now corrected. `FUN_02332660.c` (`G_023c10c4 = FUN_02332598;`, a Thumb
+function pointer stored as data) tripped a false positive that led to the
+`| 1` interworking tolerance above. Six other flagged files turned out to be
+false alarms from the spot-check script itself, not `verify_relocs()` - they
+'re already honestly parked `NONMATCHING` (register-coloring/scheduling
+floors), which the script didn't filter for.
+
 ## tools/match.py's relocation wildcarding had an alignment bug
 
 Fixed this session: `extract_func()` marked a relocation's compare-word as

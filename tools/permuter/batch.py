@@ -96,7 +96,7 @@ def run_permuter(out, secs):
     return None
 
 
-def oracle_ok(src, name, module, mode, tgt):
+def oracle_ok(src, name, module, mode, tgt, addr):
     import tempfile
     flags = T.flags_for(module, mode)
     with tempfile.TemporaryDirectory() as td:
@@ -107,11 +107,17 @@ def oracle_ok(src, name, module, mode, tgt):
         obj = M.compile_c(cf, M.CANONICAL, flags)
     if obj is None:
         return False
-    code, relocs = M.extract_func(obj, name)
+    code, relocs, reloc_info = M.extract_func(obj, name)
     if code is None:
         return False
     ok, _ = M.compare(tgt, code, relocs, verbose=False)
-    return ok
+    if not ok:
+        return False
+    # compare() wildcards every reloc word - independently check any
+    # address-named callee/global actually targets what its name claims
+    # (see match.py's verify_relocs() docstring).
+    bad = [r for r in M.verify_relocs(addr, tgt, reloc_info, mode == "thumb") if r[4] is False]
+    return not bad
 
 
 def main():
@@ -142,7 +148,7 @@ def main():
         if not src:
             print("  no score-0 found in budget")
             continue
-        if oracle_ok(src, name, f["module"], f["mode"], tgt):
+        if oracle_ok(src, name, f["module"], f["mode"], tgt, addr):
             st = L.bank({"addr": addr, "name": name, "size": size,
                         "module": f["module"], "versions": ["permuter"]}, src)
             banked += st == "banked"
