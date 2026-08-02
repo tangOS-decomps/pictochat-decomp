@@ -185,7 +185,7 @@ def bank(record, src_text):
     name = rec["name"]
     ext = "cpp" if src_text.startswith("//cpp") else "c"
     body = src_text if src_text.endswith("\n") else src_text + "\n"
-    if not MARKER_RE.match(body):
+    if not MARKER_RE.search(body):
         marker = marker_for(k[0], k[1], name)
         # keep a leading `//cpp` directive first (swarm/templates near-miss
         # convention), marker right after it

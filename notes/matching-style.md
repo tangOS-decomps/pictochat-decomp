@@ -25,8 +25,17 @@ every C++ source file. Functions with C linkage should be wrapped in `extern "C"
 
 `src/arm9/<name>.cpp` or `src/arm7/<name>.cpp`, named after the function's real
 symbol name if known (e.g. `_ZN3IRQ10DisableAllEv.cpp`), otherwise `FUN_<hex_address>.cpp`.
-Small groups of tightly related functions (e.g. a getter/setter pair) in one file are fine;
+If a real symbol name collides across modules, disambiguate with
+`<name>_<hex_address>.cpp` (see `tools/sync_ledger.py`). Small groups of
+tightly related functions (e.g. a getter/setter pair) in one file are fine;
 whole subsystems in one file are not.
+
+A real C++ member function (the disassembly passes `this` implicitly, the
+way a method call does, rather than as an explicit first argument) doesn't
+need a fake wrapper class to reproduce byte-for-byte - `extern "C" void
+FUN_<addr>(void* self, ...)` with `self` as an explicit first parameter
+lands in the same register (`this`'s implicit slot under the Itanium ABI)
+and compiles identically. Prefer that over inventing a placeholder class.
 
 ## C++ Demangling & Class Indexing Tools
 
