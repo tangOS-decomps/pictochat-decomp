@@ -81,6 +81,24 @@ def render(seed_text: str, choice: dict) -> str:
     return TOKEN_RE.sub(repl, seed_text)
 
 
+FLAGS_LINE_RE = re.compile(r"^// flags: (.*)$", re.M)
+OPT_TOKEN_RE = re.compile(r"-O\d[\w,]*")
+
+
+def embed_opt_flag(src: str, opt: str) -> str:
+    """Replace (or add) the -O<n> token on the seed's own `// flags:` line
+    with `opt`, keeping every other token (e.g. -noThumb) untouched. Adds a
+    `// flags: <opt>` line right after the `// decomp:` marker if the seed
+    had none."""
+    m = FLAGS_LINE_RE.search(src)
+    if m:
+        line = m.group(1)
+        new_line = OPT_TOKEN_RE.sub(opt, line) if OPT_TOKEN_RE.search(line) else f"{opt} {line}"
+        return src[:m.start(1)] + new_line + src[m.end(1):]
+    marker_end = src.find("\n") + 1  # after the `// decomp:` line
+    return src[:marker_end] + f"// flags: {opt}\n" + src[marker_end:]
+
+
 def compile_and_probe(src: str, func: str, flags: str):
     with tempfile.NamedTemporaryFile(suffix=".c", mode="w", delete=False, encoding="utf-8") as f:
         f.write(src)
@@ -144,26 +162,40 @@ def main():
             if r is None:
                 continue
             pushed, frame, size = r
-            dist = abs(len(pushed) - len(t_pushed)) * 1000 + abs(frame - t_frame)
-            exact = pushed == t_pushed and frame == t_frame
-            results.append((dist, choice, opt, pushed, frame, size, src, exact))
+            frame_dist = abs(len(pushed) - len(t_pushed)) * 1000 + abs(frame - t_frame)
+            # Frame shape alone is necessary, not sufficient - two candidates
+            # can share an identical prologue with wildly different bodies
+            # (confirmed in practice: an early frame_search run on
+            # FUN_022d5870 found an exact frame match whose body was still
+            # 20 real diff blocks away). Total compiled size is a cheap,
+            # strong secondary signal of true closeness - rank on it first
+            # once frame_dist is equal, not as an afterthought.
+            size_dist = abs(size - args.size)
+            dist = frame_dist * 100000 + size_dist
+            exact_frame = pushed == t_pushed and frame == t_frame
+            results.append((dist, frame_dist, size_dist, choice, opt, pushed, frame, size, src, exact_frame))
 
     results.sort(key=lambda r: r[0])
     print(f"{len(results)}/{total} compiled successfully. Top {min(args.keep, len(results))}:\n")
     out_dir = pathlib.Path(args.out_dir) if args.out_dir else seed_path.parent
-    for i, (dist, choice, opt, pushed, frame, size, src, exact) in enumerate(results[:args.keep]):
+    for i, (dist, frame_dist, size_dist, choice, opt, pushed, frame, size, src, exact_frame) in enumerate(results[:args.keep]):
         tag = ",".join(f"{n}={v}" for n, v in choice.items())
-        status = "EXACT FRAME MATCH" if exact else f"dist={dist}"
-        print(f"  [{i}] {opt:6} {tag:50} pushed={len(pushed)} frame=0x{frame:x} size=0x{size:x}  {status}")
+        status = ("EXACT FRAME + SIZE" if size_dist == 0 else "exact frame, size differs") if exact_frame else f"frame_dist={frame_dist}"
+        print(f"  [{i}] {opt:6} {tag:50} pushed={len(pushed)} frame=0x{frame:x} "
+              f"size=0x{size:x} (target 0x{args.size:x})  {status}")
+        # Embed the winning opt-level into the saved file's own `// flags:`
+        # marker (replacing any existing -O<n> token, keeping the rest of
+        # the line intact) so it's actually reproducible by a plain
+        # match.py/fdiff.py call later, not just inside this search run.
         outp = out_dir / f"{seed_path.stem}_best{i}.c"
-        outp.write_text(src, encoding="utf-8")
+        outp.write_text(embed_opt_flag(src, opt), encoding="utf-8")
 
-    if results and results[0][7]:
-        print(f"\nEXACT FRAME MATCH - see {out_dir / (seed_path.stem + '_best0.c')}")
-        print("Frame shape matching is necessary but not sufficient - run "
-              "tools/fdiff.py --align on it next to check actual byte content.")
+    if results and results[0][9] and results[0][2] == 0:
+        print(f"\nEXACT FRAME + SIZE MATCH - see {out_dir / (seed_path.stem + '_best0.c')}")
+        print("Still not proof of a real match - run tools/fdiff.py --align on it "
+              "next to check actual byte content, then tools/match.py to confirm.")
     elif results:
-        print(f"\nNo exact frame match. Closest saved to "
+        print(f"\nNo exact frame+size match. Closest (by frame, then size) saved to "
               f"{out_dir / (seed_path.stem + '_best0.c')}.")
 
 
