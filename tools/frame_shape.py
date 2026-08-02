@@ -49,31 +49,44 @@ ARM_REGS = ["r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "sb", "sl",
 
 
 def probe(code: bytes, thumb: bool, max_insns: int = 16):
-    """Scan the first few instructions for a push/stmdb (register-save set)
-    and a following sub sp,sp,#N (extra frame). Returns
-    (pushed_regs: list[str], frame_bytes: int, insns_scanned: int)."""
+    """Scan the first few instructions for one or more leading push/stmdb
+    (register-save set) and a following sub sp,sp,#N (extra frame). Returns
+    (pushed_regs: list[str], frame_bytes: int, insns_scanned: int).
+
+    Some functions emit TWO leading pushes, not one: `push {r0,r1,r2,r3}`
+    to spill all incoming argument registers to fixed stack slots (seen on
+    FUN_022d5a64 - a real, large register-pressure signal, not noise),
+    immediately followed by the normal `push {r4-fp,lr}` callee-saved frame
+    push. An earlier version of this function only kept the LAST push seen
+    (each new push overwrote `pushed` instead of accumulating), silently
+    discarding the first one and undercounting total frame usage by its
+    size - caught when a candidate's frame_shape reported matching target
+    exactly `9 regs` while still failing `--compare`, because target's
+    real total included the discarded 16 bytes. Now accumulates every
+    consecutive leading push before the first non-push/non-sub instruction."""
     md = Cs(CS_ARCH_ARM, CS_MODE_THUMB if thumb else CS_MODE_ARM)
     md.detail = True
-    pushed, frame = [], 0
+    pushed_groups, frame = [], 0
     n = 0
     for insn in md.disasm(code[:max_insns * 4], 0):
         n += 1
         mnem = insn.mnemonic
         if mnem in ("push", "stmdb", "stmfd"):
             ops = [o.strip() for o in insn.op_str.split("{")[-1].rstrip("}").split(",")]
-            pushed = [o.strip() for o in ops if o.strip()]
-        elif mnem == "sub" and pushed and "sp" in insn.op_str.split(",")[0]:
+            pushed_groups.append([o.strip() for o in ops if o.strip()])
+        elif mnem == "sub" and pushed_groups and "sp" in insn.op_str.split(",")[0]:
             imm = insn.op_str.rsplit("#", 1)[-1]
             try:
                 frame = int(imm, 0)
             except ValueError:
                 pass
             break
-        elif pushed:
-            # first non-frame-setup instruction after the push - prologue's over
+        elif pushed_groups:
+            # first non-frame-setup instruction after the push(es) - prologue's over
             break
         if n >= max_insns:
             break
+    pushed = [r for group in pushed_groups for r in group]
     return pushed, frame, n
 
 
