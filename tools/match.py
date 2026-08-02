@@ -85,6 +85,37 @@ def target_bytes(module: str, addr: int, size: int) -> bytes:
     return data[off:off + size]
 
 
+def apply_flags_marker(flags: str, src_text: str, allow_thumb_heuristic: bool = True) -> str:
+    """Apply a source file's `//cpp` and `// flags: ...` overrides to a base
+    flags string. Shared by match.py/fdiff.py/nonmatching.py so a banked
+    file's flags are reproduced identically by every tool that recompiles it.
+
+    `// flags: ` tokens are applied structurally, not just appended:
+      * `-arm` / `-noThumb` strips `-thumb` (ARM-mode candidate).
+      * `-O<n>,<x>` REPLACES the base flags' own `-O<n>,<x>` (e.g. swapping
+        `-O4,p` for `-O4,s` - see notes/tooling.md's "pop{pc} fold" section).
+        Appending a second `-O4,...` after the first, rather than replacing
+        it, silently produces nonsense output from mwccarm (confirmed
+        empirically - this bit a real match attempt before being fixed).
+      * anything else is appended verbatim, same as before.
+    """
+    if src_text.startswith("//cpp") and "-lang c99" in flags:
+        flags = flags.replace("-lang c99", "-lang c++")
+    if "// flags: " in src_text:
+        extra = src_text.split("// flags: ")[1].split("\n")[0].strip()
+        for tok in extra.split():
+            m = re.match(r"^-O\d", tok)
+            if m:
+                flags = re.sub(r"-O\d[\w,]*", tok, flags)
+            elif tok in ("-arm", "-noThumb"):
+                flags = flags.replace(" -thumb", "")
+            else:
+                flags += " " + tok
+    elif allow_thumb_heuristic and re.search(r"\basm\b", src_text) and "-thumb" in flags:
+        flags = flags.replace(" -thumb", "")
+    return flags
+
+
 def compile_c(cfile: pathlib.Path, version: str, flags: str) -> bytes | None:
     exe = MW / version / "mwccarm.exe"
     if not exe.is_file():
@@ -116,13 +147,15 @@ def extract_func(obj: bytes, func: str):
     symtab = elf.get_section_by_name(".symtab")
     sym = next((s for s in symtab.iter_symbols() if s.name == func), None)
     if sym is None:
-        return None, None
+        return None, None, None
     sec = elf.get_section(sym["st_shndx"])
     start, size = sym["st_value"], sym["st_size"]
     code = sec.data()[start:start + size]
     relocs = set()
+    reloc_info = []
     rel = elf.get_section_by_name(".rel" + sec.name) or elf.get_section_by_name(".rela" + sec.name)
     if rel is not None:
+        rsymtab = elf.get_section(rel["sh_link"])
         for r in rel.iter_relocations():
             o = r["r_offset"] - start
             if 0 <= o < size:
@@ -134,7 +167,70 @@ def extract_func(obj: bytes, func: str):
                 # gets real-compared and spuriously mismatches.
                 relocs.add(o & ~3)
                 relocs.add((o + 3) & ~3)
-    return code, relocs
+                rsym = rsymtab.get_symbol(r["r_info_sym"])
+                reloc_info.append({"offset": o, "type": r["r_info_type"], "sym": rsym.name})
+    return code, relocs, reloc_info
+
+
+# This project's convention: an extern callee/global that doesn't have a real
+# recovered symbol name yet is still named after its own real address
+# (FUN_<hex>, func_<hex>, G_<hex>, ...) - see notes/matching-style.md. That
+# means for any relocation whose symbol matches this pattern, the *intended*
+# real target address is recoverable straight from the candidate's own source,
+# even though compare()'s per-word check can't see it (relocations are always
+# wildcarded there - see extract_func()'s docstring above). verify_relocs()
+# closes that gap: it decodes what the REAL ROM bytes at that slot actually
+# resolve to (a literal pool word for a data reference, a resolved branch
+# target for a call) and checks it against the address the symbol name claims.
+# Without this, a candidate could call/reference a completely wrong
+# address-named symbol and still "match" on ndiff=0, because every instruction
+# word touching that reference is unconditionally wildcarded either way.
+SYM_ADDR_RE = re.compile(r"_([0-9a-fA-F]{8})$")
+R_ARM_ABS32 = 2
+BRANCH_MNEMONICS = {"bl", "blx", "b", "bx"}
+md_thumb = Cs(CS_ARCH_ARM, 0x10)  # CS_MODE_THUMB
+
+
+def sym_target_addr(name: str):
+    m = SYM_ADDR_RE.search(name)
+    return int(m.group(1), 16) if m else None
+
+
+def verify_relocs(func_addr: int, target_code: bytes, reloc_info: list, is_thumb: bool):
+    """[(offset, sym, expected_addr, found_addr_or_None, ok_or_None), ...] for
+    every relocation whose symbol name encodes a real address. ok is None
+    (unverified, not a failure) when the real bytes don't decode as a
+    recognizable data word or branch - e.g. an unusual relocation type this
+    hasn't been taught yet; never silently treated as a pass."""
+    import struct
+    out = []
+    for info in reloc_info:
+        want = sym_target_addr(info["sym"])
+        if want is None:
+            continue
+        off, rtype = info["offset"], info["type"]
+        if off + 4 > len(target_code):
+            out.append((off, info["sym"], want, None, None))
+            continue
+        if rtype == R_ARM_ABS32:
+            found = struct.unpack_from("<I", target_code, off)[0]
+            # A Thumb function's address stored as a data value (a function
+            # pointer, not a branch target) legitimately has bit 0 set - the
+            # ARM/Thumb interworking "call this in Thumb state" tag (real
+            # example: G_023c10c4 = FUN_02332598 in FUN_02332660.c). A branch
+            # instruction's resolved target (the other arm below) never has
+            # this ambiguity - capstone already resolves it to the true byte
+            # address either way - so only tolerate +1 here.
+            out.append((off, info["sym"], want, found, found in (want, want | 1)))
+            continue
+        cs = md_thumb if is_thumb else md
+        insn = next(cs.disasm(target_code[off:off + 4], func_addr + off), None)
+        if insn is None or insn.mnemonic not in BRANCH_MNEMONICS or "#0x" not in insn.op_str:
+            out.append((off, info["sym"], want, None, None))
+            continue
+        found = int(insn.op_str.rsplit("#", 1)[-1], 16)
+        out.append((off, info["sym"], want, found, found == want))
+    return out
 
 
 def compare(target: bytes, cand: bytes, relocs: set, verbose: bool = True):
@@ -184,16 +280,7 @@ def main():
     cfile = pathlib.Path(args.c)
     try:
         src_text = cfile.read_text(encoding="utf-8")
-        if src_text.startswith("//cpp") and "-lang c99" in flags:
-            flags = flags.replace("-lang c99", "-lang c++")
-        if "// flags: " in src_text:
-            extra = src_text.split("// flags: ")[1].split("\n")[0].strip()
-            if "-arm" in extra or "-noThumb" in extra:
-                flags = flags.replace(" -thumb", "")
-            else:
-                flags += " " + extra
-        elif not args.flags and re.search(r"\basm\b", src_text) and "-thumb" in flags:
-            flags = flags.replace(" -thumb", "")
+        flags = apply_flags_marker(flags, src_text, allow_thumb_heuristic=not args.flags)
     except OSError:
         pass
 
@@ -213,26 +300,37 @@ def main():
     else:
         versions = [CANONICAL]
 
+    is_thumb = "-thumb" in flags
     matched = []
     closest = None
     for v in versions:
         obj = compile_c(cfile, v, flags)
         if obj is None:
             continue
-        code, relocs = extract_func(obj, args.func)
+        code, relocs, reloc_info = extract_func(obj, args.func)
         if code is None:
             print(f"  {v}: symbol '{args.func}' not found in object")
             continue
         if not args.brief:
             print(f"\n=== mwccarm {v} ===")
         ok, ndiff = compare(tgt, code, relocs, verbose=not args.brief)
+        reloc_checks = verify_relocs(args.addr, tgt, reloc_info, is_thumb)
+        bad_relocs = [r for r in reloc_checks if r[4] is False]
+        if bad_relocs:
+            ok = False
+            for off, sym, want, found, _ in bad_relocs:
+                print(f"  ! reloc @ +0x{off:x} '{sym}' claims target 0x{want:08x}, "
+                      f"real bytes resolve to 0x{found:08x}" if found is not None else
+                      f"  ! reloc @ +0x{off:x} '{sym}' claims target 0x{want:08x}, "
+                      f"real bytes don't decode as a data word or branch")
         if ok:
             matched.append(v)
             if args.brief:
                 print(f"  {v}: MATCH")
         else:
             if args.brief:
-                print(f"  {v}: {ndiff} word(s) differ")
+                print(f"  {v}: {ndiff} word(s) differ" +
+                      (f", {len(bad_relocs)} reloc target(s) wrong" if bad_relocs else ""))
             if closest is None or ndiff < closest[0]:
                 closest = (ndiff, v, code, relocs)
 

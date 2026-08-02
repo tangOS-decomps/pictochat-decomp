@@ -169,12 +169,23 @@ def main():
                     obj = M.compile_c(tmp_path, v, flags)
                     if obj is None:
                         continue
-                    code, relocs = M.extract_func(obj, f["name"])
+                    code, relocs, reloc_info = M.extract_func(obj, f["name"])
                     if code is None:
                         continue
                     target = F.target_bytes(f)
                     ok, _ = M.compare(target, code, relocs, verbose=False)
                     if ok:
+                        # A "duplicate" body still has to call/reference the same
+                        # real addresses at its new site - compare() wildcards
+                        # every reloc word, so check any address-named symbol
+                        # against what the real bytes at this address resolve to.
+                        bad = [r for r in M.verify_relocs(f["addr"], target, reloc_info,
+                                                            f["mode"] == "thumb") if r[4] is False]
+                        if bad:
+                            print(f"    ! {f['name']} @ 0x{f['addr']:08x}: reloc target mismatch "
+                                  f"({bad[0][1]} claims 0x{bad[0][2]:08x}, real bytes are "
+                                  f"0x{bad[0][3]:08x}) - not a real duplicate, skipping")
+                            continue
                         ok_versions.append(v)
             finally:
                 tmp_path.unlink(missing_ok=True)

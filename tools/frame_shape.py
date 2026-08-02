@@ -110,7 +110,7 @@ def main():
         obj = M.compile_c(pathlib.Path(args.c), args.version, flags)
         if obj is None:
             sys.exit(1)
-        code, _ = M.extract_func(obj, args.func)
+        code, _, _ = M.extract_func(obj, args.func)
         if code is None:
             sys.exit(f"symbol '{args.func}' not found in compiled object")
         c_pushed, c_frame = report("CANDIDATE", code, "-thumb" in flags and "-noThumb" not in flags)

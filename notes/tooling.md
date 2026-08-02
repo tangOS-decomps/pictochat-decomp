@@ -333,6 +333,56 @@ landing on it by luck. So far the whole `dsi/` family is codegen-identical
 for every construct in the default probe file - feed it something more
 unusual if you want to actually narrow the pin down.
 
+## tools/match.py never actually checked a relocation's target - only fixed this session
+
+Every relocation (a `bl` to an extern function, a pool-loaded address of an
+extern global) got wildcarded by `compare()` unconditionally - the README's
+claim that matching is "relocation-aware... a raw byte diff alone would
+wildcard a wrong callee/global sitting in a reloc slot; `tools/match.py`
+checks both" was **not actually true** until this session. Concretely: for
+`src/arm9/FUN_02320938.c` (5 extern calls, 5 extern globals), 13 of its 14
+code words are relocations - `compare()` was really only checking 1 word out
+of 14. Renaming an extern to point at a completely wrong address would still
+report MATCH, as long as the byte count and non-relocated words lined up.
+
+**Fixed, but only where the information exists to fix it.** This project's
+own convention already embeds the real address in most placeholder names
+(`FUN_<hex>`, `func_<hex>`, `G_<hex>`, ...) - `match.py` now has
+`verify_relocs()`, which parses that address back out of each relocation's
+ELF symbol name and checks it against what the *real* ROM bytes at that slot
+actually decode to: a direct compare for a data/pool relocation (`R_ARM_ABS32`
+- allowing `addr | 1` too, since a Thumb function's address stored as a
+*value* legitimately carries the ARM/Thumb interworking bit, unlike a
+`bl`'s resolved branch target, which capstone always resolves to the true
+byte address either way), or a capstone-decoded resolved branch target for a
+call relocation. `main()` now downgrades a would-be MATCH to a failure and
+prints exactly which symbol claimed which address vs. what the ROM really has
+there. Wired into every auto-banking path (`match.py`, `fdiff.py`,
+`find_duplicates.py`, `permuter/batch.py`) - `templates.py`'s generated
+candidates only ever use address-less placeholder names (`G`, `F1`, ...) so
+there's nothing for it to check there.
+
+**This can't retroactively audit most of the existing corpus** - the
+overwhelming majority of already-matched files use generic, non-address
+placeholder names (`extern int G[]; extern void F1(void);`), which is exactly
+as unverifiable as before; `verify_relocs()` silently skips anything it can't
+parse an address out of, same as the old blind wildcard. It only closes the
+gap for symbols that already claim a specific address in their own name -
+which is worth doing consistently going forward, especially on functions
+(like the largest unmatched ones) that call many still-unidentified helpers.
+
+A spot-check of the 38 committed files that do use address-encoded names
+turned up exactly 2 real issues (both fixed): `FUN_02320728.cpp` had two
+globals misnamed after the *enclosing function's own address*
+(`gBufferStart_02320728`/`gBufferEnd_02320728`) instead of their real
+addresses (`0x02348ee4`/`0x023490e4`) - byte-identical, just a misleading
+name, now corrected. `FUN_02332660.c` (`G_023c10c4 = FUN_02332598;`, a Thumb
+function pointer stored as data) tripped a false positive that led to the
+`| 1` interworking tolerance above. Six other flagged files turned out to be
+false alarms from the spot-check script itself, not `verify_relocs()` - they
+'re already honestly parked `NONMATCHING` (register-coloring/scheduling
+floors), which the script didn't filter for.
+
 ## tools/match.py's relocation wildcarding had an alignment bug
 
 Fixed this session: `extract_func()` marked a relocation's compare-word as
@@ -460,6 +510,84 @@ Until a specific function's fold is actually cracked, the cheap workaround
 is avoidance: before drafting a candidate, check the target's own real
 tail bytes (`tools/disasm.py`) and prefer functions that already end in
 separate `pop`+`bx lr` (the vast majority) over ones ending in the fold.
+
+## `-O4,s` also fixes a "conditional early-return epilogue" mismatch - a second real success, not just the fold
+
+A different recurring near-miss on small `if (early) { ...; return; } ...more...`-
+shaped functions: the target shares ONE epilogue via a forward branch
+(`bne label; ...more...; label: pop {..}; bx lr`), while `-O4,p` candidates
+instead duplicate the whole epilogue inline as predicated instructions
+(`popne {..}; bxne lr`) at the early-return site. Confirmed fixed by
+`-O4,s` on a real function this session (`FUN_022cfa90.c`, arm7) - unlike
+the fold puzzle above (where `-O4,s` only ever produced *other* codegen
+differences on the two real cases tried), here it landed a clean, complete
+byte-exact match with no other changes. Worth trying `-O4,s` on this
+specific near-miss shape before spending iteration cycles on C rephrasings -
+early-return-vs-shared-epilogue doesn't reliably respond to source
+restructuring (tried explicit `return` vs. `if/else` on the same function,
+no difference; the opt-level switch is what mattered).
+
+To use a non-default flag on a banked file, add `// flags: ...` as the line
+right after the `// decomp:` marker (parsed by all of `match.py`/`fdiff.py`/
+`nonmatching.py` via the shared `apply_flags_marker()`) - e.g. `// flags:
+-O4,s -noThumb`. Multiple tokens on one line are fine. This replaces the
+base flags' own `-O<n>,<x>` instead of appending a second one - appending
+(the bug before this session) silently produces garbage output from
+mwccarm, since it doesn't just take the last `-O4,...` and ignore the
+earlier one.
+
+**Also note**: an ARM-mode (non-Thumb) `arm7` function needs `-noThumb` in
+that marker line to be independently re-verifiable - `DEFAULT_FLAGS_ARM7`
+defaults to `-thumb`. Passing `--flags` by hand on the command line during
+iteration works but doesn't get remembered; if the banked file itself
+doesn't carry the marker, a later plain `tools/match.py --c file --func ...`
+call (e.g. from `tools/sync_ledger.py`-adjacent tooling, or another
+contributor) recompiles it in the wrong mode and "loses" the match. Caught
+this session after 5 ARM-mode arm7 matches had already been banked without
+the marker - all fixed retroactively; check for it on any future ARM-mode
+`arm7` bank.
+
+## A base-pointer caching floor: the compiler's CSE-across-calls choice doesn't reliably respond to source phrasing
+
+A third recurring near-miss, seen on 3 sibling arm7 functions this session
+(`FUN_022ce658`, `FUN_022cfb24`, `FUN_022cfc48` - all parked NONMATCHING):
+the target reloads the same pool constant fresh (a fresh `ldr rX,[pc,#N]`)
+at each of 2-3 use sites spread across intervening function calls, while the
+candidate's `-O4` optimizer caches it in a callee-saved register instead and
+reuses it across the calls - fewer total instructions, but a different
+push/pop set and therefore a size/shape mismatch. This is the *opposite*
+problem from the frame-shape note above (there, the candidate needed to
+cache more; here, it needs to cache *less*, matching the target's apparent
+preference to keep the callee-saved register count down rather than avoid
+redundant pool loads).
+
+Tried and failed to steer this via source phrasing: a local pointer variable
+holding the base, a `volatile`-qualified local (forces a real stack spill
+instead - worse, not better), referencing an already-declared named extern
+instead of a raw integer-cast pointer, and splitting one struct-typed base
+into separate per-field extern globals (needs *more* registers, not fewer,
+since there's no longer a shared base to fold). None reproduced the target's
+reload-every-time behavior. Unlike the two `-O4,s` wins above, switching
+optimization level didn't close this gap either (tested on `FUN_022cfc48`).
+Currently unsolved - if you crack the actual lever, document it here.
+
+## `tools/disasm.py` resolves and dereferences pc-relative pool loads
+
+Added this session after doing the equivalent by hand (`target_bytes()` +
+`struct.unpack_from("<I", ...)`) about a dozen times while working the
+`FUN_022ce8b0` callee cluster. Every `ldr rX, [pc, #N]`-shaped instruction
+now gets an inline annotation showing the resolved pool address AND the
+4 bytes actually stored there: `ldr r1, [pc, #0x2c]   ; [0x022CE5E8] =
+0x023180DC`. Pass `--no-pools` to disable (e.g. for a cleaner diff against
+old output). Also added `--to-next`, which disassembles up to the next
+known function's start address (from `tools/funcs.py`) instead of a fixed
+`--length` - covers this function's own trailing literal pool automatically
+in the common case, though not always: if Ghidra never detected a small
+function sitting in the gap (a tail-call thunk, usually), `--to-next`
+overshoots into that neighbor's bytes too. Caught this on `FUN_022cfa90`,
+where the "next function" was actually 0x14 bytes of a separate,
+Ghidra-unlisted `bx ip` trampoline - always sanity-check where the real
+`bx lr`/`pop {...,pc}` falls before trusting `--to-next`'s span verbatim.
 
 ## Ghidra's function size can exclude a trailing literal pool
 

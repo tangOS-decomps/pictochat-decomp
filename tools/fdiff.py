@@ -198,15 +198,12 @@ def main():
     flags = args.flags or (M.DEFAULT_FLAGS_ARM7 if args.module == "arm7" else M.DEFAULT_FLAGS)
     cfile = pathlib.Path(args.c)
     src_text = cfile.read_text(encoding="utf-8")
-    if src_text.startswith("//cpp") and "-lang c99" in flags:
-        flags = flags.replace("-lang c99", "-lang c++")
-    if not args.flags and re.search(r"\basm\b", src_text) and "-thumb" in flags:
-        flags = flags.replace(" -thumb", "")
+    flags = M.apply_flags_marker(flags, src_text, allow_thumb_heuristic=not args.flags)
 
     obj = M.compile_c(cfile, args.version, flags)
     if obj is None:
         sys.exit(1)
-    code, relocs = M.extract_func(obj, args.func)
+    code, relocs, reloc_info = M.extract_func(obj, args.func)
     if code is None:
         sys.exit(f"symbol '{args.func}' not found in compiled object")
 
@@ -221,7 +218,22 @@ def main():
 
     ok, ndiff = diff(target, code, relocs, compact=args.compact,
                       max_runs=args.max_runs, max_lines_per_run=args.max_lines_per_run)
-    print(f"\nRESULT match={ok} mismatches={ndiff}/{len(target)//4}")
+
+    # Every relocation is wildcarded above regardless of whether it points at
+    # the right place - see match.py's verify_relocs() docstring. Catch a
+    # wrong callee/global that happens to encode its intended address in its
+    # own name (this project's `<prefix>_<hex>` convention).
+    is_thumb = "-thumb" in flags
+    bad = [r for r in M.verify_relocs(args.addr, target, reloc_info, is_thumb) if r[4] is False]
+    if bad:
+        ok = False
+        print()
+        for off, sym, want, found, _ in bad:
+            print(f"  ! reloc @ +0x{off:x} '{sym}' claims target 0x{want:08x}, "
+                  f"real bytes resolve to 0x{found:08x}")
+
+    print(f"\nRESULT match={ok} mismatches={ndiff}/{len(target)//4}" +
+          (f" reloc_mismatches={len(bad)}" if bad else ""))
 
 
 if __name__ == "__main__":

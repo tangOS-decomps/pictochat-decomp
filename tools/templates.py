@@ -739,7 +739,7 @@ def oracle_ok(c_source, name, target, module, mode):
         obj = M.compile_c(cfile, M.CANONICAL, flags)
     if obj is None:
         return False
-    code, relocs = M.extract_func(obj, name)
+    code, relocs, _ = M.extract_func(obj, name)
     if code is None:
         return False
     ok, _ = M.compare(target, code, relocs, verbose=False)
