@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022ce538 name=FUN_022ce538
+// flags: -noThumb
 // NONMATCHING: 3 base-pointer registers live simultaneously -> spills to push/pop{r3,lr} the target doesn't need; tried 3 phrasings (div=999). Logic verified correct vs ROM; not
 // byte-matchable from C at mwccarm dsi/1.3 (see notes/matching-style.md).
 // Counts as decompiled, not matched.

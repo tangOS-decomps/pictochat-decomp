@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022ce884 name=FUN_022ce884
+// flags: -noThumb
 typedef unsigned short u16;
 
 typedef struct Conn {

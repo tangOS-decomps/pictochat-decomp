@@ -26,7 +26,6 @@ Usage:
 """
 import argparse
 import pathlib
-import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -43,8 +42,7 @@ def add(args):
     flags = args.flags or (M.DEFAULT_FLAGS_ARM7 if args.module == "arm7" else M.DEFAULT_FLAGS)
     cfile = pathlib.Path(args.c)
     src_text = cfile.read_text(encoding="utf-8")
-    if not args.flags and re.search(r"\basm\b", src_text) and "-thumb" in flags:
-        flags = flags.replace(" -thumb", "")
+    flags = M.apply_flags_marker(flags, src_text, allow_thumb_heuristic=not args.flags)
 
     target = M.target_bytes(args.module, args.addr, args.size)
     obj = M.compile_c(cfile, args.version, flags)

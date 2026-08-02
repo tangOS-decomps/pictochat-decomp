@@ -85,6 +85,37 @@ def target_bytes(module: str, addr: int, size: int) -> bytes:
     return data[off:off + size]
 
 
+def apply_flags_marker(flags: str, src_text: str, allow_thumb_heuristic: bool = True) -> str:
+    """Apply a source file's `//cpp` and `// flags: ...` overrides to a base
+    flags string. Shared by match.py/fdiff.py/nonmatching.py so a banked
+    file's flags are reproduced identically by every tool that recompiles it.
+
+    `// flags: ` tokens are applied structurally, not just appended:
+      * `-arm` / `-noThumb` strips `-thumb` (ARM-mode candidate).
+      * `-O<n>,<x>` REPLACES the base flags' own `-O<n>,<x>` (e.g. swapping
+        `-O4,p` for `-O4,s` - see notes/tooling.md's "pop{pc} fold" section).
+        Appending a second `-O4,...` after the first, rather than replacing
+        it, silently produces nonsense output from mwccarm (confirmed
+        empirically - this bit a real match attempt before being fixed).
+      * anything else is appended verbatim, same as before.
+    """
+    if src_text.startswith("//cpp") and "-lang c99" in flags:
+        flags = flags.replace("-lang c99", "-lang c++")
+    if "// flags: " in src_text:
+        extra = src_text.split("// flags: ")[1].split("\n")[0].strip()
+        for tok in extra.split():
+            m = re.match(r"^-O\d", tok)
+            if m:
+                flags = re.sub(r"-O\d[\w,]*", tok, flags)
+            elif tok in ("-arm", "-noThumb"):
+                flags = flags.replace(" -thumb", "")
+            else:
+                flags += " " + tok
+    elif allow_thumb_heuristic and re.search(r"\basm\b", src_text) and "-thumb" in flags:
+        flags = flags.replace(" -thumb", "")
+    return flags
+
+
 def compile_c(cfile: pathlib.Path, version: str, flags: str) -> bytes | None:
     exe = MW / version / "mwccarm.exe"
     if not exe.is_file():
@@ -249,16 +280,7 @@ def main():
     cfile = pathlib.Path(args.c)
     try:
         src_text = cfile.read_text(encoding="utf-8")
-        if src_text.startswith("//cpp") and "-lang c99" in flags:
-            flags = flags.replace("-lang c99", "-lang c++")
-        if "// flags: " in src_text:
-            extra = src_text.split("// flags: ")[1].split("\n")[0].strip()
-            if "-arm" in extra or "-noThumb" in extra:
-                flags = flags.replace(" -thumb", "")
-            else:
-                flags += " " + extra
-        elif not args.flags and re.search(r"\basm\b", src_text) and "-thumb" in flags:
-            flags = flags.replace(" -thumb", "")
+        flags = apply_flags_marker(flags, src_text, allow_thumb_heuristic=not args.flags)
     except OSError:
         pass
 

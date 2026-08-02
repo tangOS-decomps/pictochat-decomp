@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022ce5b4 name=FUN_022ce5b4
+// flags: -noThumb
 extern unsigned char G_023180dc[];
 extern int func_023018a0(unsigned int avg);
 

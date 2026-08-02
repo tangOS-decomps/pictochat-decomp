@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022d3bd4 name=FUN_022d3bd4
+// flags: -noThumb
 // NONMATCHING: pool-load-order scheduling floor (ip/r0 swapped) for a computed tail-call, tried 4 rephrasings + -O4,s (div=3). Logic verified correct vs ROM; not
 // byte-matchable from C at mwccarm dsi/1.3 (see notes/matching-style.md).
 // Counts as decompiled, not matched.

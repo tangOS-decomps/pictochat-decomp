@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022cfa44 name=FUN_022cfa44
+// flags: -noThumb
 typedef struct ConnMgr3 {
     char pad[0x544];
     void *f544;

@@ -1,4 +1,5 @@
 // decomp: module=arm7 addr=0x022ce718 name=FUN_022ce718
+// flags: -noThumb
 // NONMATCHING: optimizer elides target's redundant loop-entry test branch; tried 5 phrasings (div=999). Logic verified correct vs ROM; not
 // byte-matchable from C at mwccarm dsi/1.3 (see notes/matching-style.md).
 // Counts as decompiled, not matched.

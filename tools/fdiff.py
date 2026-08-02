@@ -198,10 +198,7 @@ def main():
     flags = args.flags or (M.DEFAULT_FLAGS_ARM7 if args.module == "arm7" else M.DEFAULT_FLAGS)
     cfile = pathlib.Path(args.c)
     src_text = cfile.read_text(encoding="utf-8")
-    if src_text.startswith("//cpp") and "-lang c99" in flags:
-        flags = flags.replace("-lang c99", "-lang c++")
-    if not args.flags and re.search(r"\basm\b", src_text) and "-thumb" in flags:
-        flags = flags.replace(" -thumb", "")
+    flags = M.apply_flags_marker(flags, src_text, allow_thumb_heuristic=not args.flags)
 
     obj = M.compile_c(cfile, args.version, flags)
     if obj is None:
