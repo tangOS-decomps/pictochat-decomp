@@ -32,6 +32,13 @@ import re
 import sys
 from typing import Dict, List, Any, Optional
 
+# Windows' console defaults to cp1252, which can't encode a lot of what real decomp
+# repos' docs/comments contain (->, checkmarks, etc.) - crashes mid-print otherwise.
+# reconfigure() is a no-op cost-wise and safe on every platform (Python 3.7+).
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "extern_config.json"
 DEFAULT_INDEX_PATH = REPO_ROOT / "extern" / "pattern_index.json"

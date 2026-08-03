@@ -42,3 +42,23 @@
 	path = extern/khdays-decomp
 	url = https://github.com/Yokimitsuro/khdays-decomp.git
 	update = none
+
+[submodule "extern/dqiv-decomp"]
+	path = extern/dqiv-decomp
+	url = https://github.com/GoldieLeGenie/DQIV-DECOMP.git
+	update = none
+
+[submodule "extern/st"]
+	path = extern/st
+	url = https://github.com/zeldaret/st.git
+	update = none
+
+[submodule "extern/pokeblack"]
+	path = extern/pokeblack
+	url = https://github.com/pokemodding/pokeblack.git
+	update = none
+
+[submodule "extern/pokeranger2"]
+	path = extern/pokeranger2
+	url = https://github.com/Kuruyia/pokeranger2.git
+	update = none

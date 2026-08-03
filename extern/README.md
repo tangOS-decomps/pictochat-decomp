@@ -48,6 +48,11 @@ verify it the same way first.
 - `fe11-us`: *Fire Emblem: New Mystery of the Emblem (US)* (`https://github.com/Eebit/fe11-us`)
 - `atc`: *Air Traffic Chaos* (`https://github.com/sasja-san/atc`)
 - `khdays-decomp`: *Kingdom Hearts 358/2 Days* (`https://github.com/Yokimitsuro/khdays-decomp`)
+- `dqiv-decomp`: *Dragon Quest IV* (`https://github.com/GoldieLeGenie/DQIV-DECOMP`) - uses `dsd`
+  (the same delink/relocate build tooling as this project).
+- `st`: *The Legend of Zelda: Spirit Tracks* (`https://github.com/zeldaret/st`)
+- `pokeblack`: *Pokémon Black* (`https://github.com/pokemodding/pokeblack`)
+- `pokeranger2`: *Pokémon Ranger: Shadows of Almia* (`https://github.com/Kuruyia/pokeranger2`)
 
 ---
 
