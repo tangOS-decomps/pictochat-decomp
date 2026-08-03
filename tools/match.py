@@ -62,7 +62,14 @@ DSI_SWEEP = ["dsi/1.1", "dsi/1.1p1", "dsi/1.2", "dsi/1.2p1", "dsi/1.2p2",
              "dsi/1.3", "dsi/1.3p1", "dsi/1.6sp1", "dsi/1.6sp2"]
 NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4",
              "2.0/base", "2.0/sp1", "2.0/sp1p2", "2.0/sp2", "2.0/sp2p2", "2.0/sp2p3", "2.0/sp2p4"]
-SWEEP = DSI_SWEEP + NTR_SWEEP
+# Recovered via tools/recover_cw2004.py (see sm64ds-decomp notes/mwccarm-codegen.md
+# 6ai) - a genuinely different, older compiler core than the 1.2/2.0 line above,
+# not just different flags. Not this title's canonical build (PictoChat is DSi-era,
+# this is a 2004 NTR-era core) but cheap to include: costs nothing extra per sweep
+# and has real precedent for reproducing prologue/materialization shapes the 1.2/2.0
+# line cannot from any source phrasing.
+CW2004_SWEEP = ["2004/b56"]
+SWEEP = DSI_SWEEP + NTR_SWEEP + CW2004_SWEEP
 PINNED = DSI_SWEEP  # until a real match narrows it down further
 # All dsi/ builds launch and self-report as "Freescale C/C++ for Embedded ARM"
 # (Metrowerks' CodeWarrior division was acquired by Freescale in 2005).

@@ -277,7 +277,12 @@ permuter's say-so.
 This project's tooling is ported from sm64ds-decomp
 ([tangosdev/sm64ds-decomp](https://github.com/tangosdev/sm64ds-decomp),
 ~95% matched as of this research) - worth checking their notes/ before
-re-deriving a large-function strategy from scratch. A few concrete,
+re-deriving a large-function strategy from scratch. See
+[mwccarm-codegen.md](mwccarm-codegen.md) for this project's own growing
+catalogue of confirmed compiler-behavior levers (mined from sm64ds-decomp's
+much larger version of the same file and verified against real targets here)
+- check it before spending time re-deriving a register-coloring or
+instruction-selection fix that's already been found. A few concrete,
 transferable findings pulled from their `research-matching-levers.md` and
 `crack-loop-runbook.md`:
 
