@@ -853,6 +853,141 @@ than the hand-picked single-axis changes tried so far; (3) clone and grep a wide
 set of extern repos' real matched source (not just the 13 currently registered)
 for the exact unfused shift-subtract-truncate shape.
 
+### Round 9 - the `first == 1` polarity fix (real), a properly-scoped/reloc-fixed permuter search (clean negative), and the precise register-competition mechanism identified by hand
+
+**Real, verified fix: `if (first == 1)` instead of `if (first)`.** Re-reading the
+target's predicated prologue instruction-by-instruction (`cmp r0,#1` / `streq` /
+`addeq`, not `cmp r0,#0` / `strne`) showed target's C almost certainly spells the
+test as an explicit `== 1` comparison, not idiomatic truthiness - `if (first)`
+compiles to `cmp r0,#0` (wrong immediate/polarity), `if (first == 1)` compiles to
+`cmp r0,#1` with the predicated arms in the SAME order as target. Confirmed
+byte-for-byte on the predicated block itself. This is now the correct base for
+any `first`-based draft, even though (see below) it alone doesn't close the gap.
+
+**Reference-repo search, done properly this time - a real, decisive negative, not
+inconclusive.** Grepped `notes/mwccarm-codegen.md` across all 13 registered repos
+for every "spill" mention (not just keyword-matched phrases) and found two
+genuinely on-point levers: 6r (`#pragma opt_propagation off` keeps a 0/1 selector
+stack-resident) and the `ok++`-vs-`ok=1` update-form lever (2140). Retested both
+against the corrected `first == 1` base - zero effect, cleanly. Section 6k
+("declare the spill victim dead-last, competing locals in reverse-register order")
+was the most specific hit in the whole corpus; swept all 12 orderings of the six
+other competing pointer locals with `cur` pinned last - **all 12 compiled to the
+identical result**, a clean negative, not a partial improvement.
+
+**The actual mechanism, found by hand-tracing every register in the target
+disassembly (not inferred): this was never really about forcing `cur` to spill in
+isolation - it's a straight competition between `cur` and `index` for the same
+register (`sl`), and the two builds pick different losers.** Enumerating target's
+full register set instruction-by-instruction gives exactly 8 persistent
+(register-resident) values - `r4`=typeFlagBase, `r5`=conn, `r6`=chunkLen,
+`r7`=val-sentinel, `r8`=slot, `sb`=len, `sl`=index, `fp`=subIndex - matching this
+project's own 8 non-`cur` "hot" variable names 1:1. `cur` is the genuine 9th
+competitor, and target's allocator spills IT (reloading from `[sp+0]` via a fresh
+`ldr` at each use - including reading the same slot via two separate `ldr`
+instructions back-to-back for two different purposes, the redundant-recompute
+idiom again, not cached in one register and reused). Every candidate compiled
+here does the opposite: keeps `cur`/`chunk` in `sl` and spills `index` instead
+(confirmed via a direct `ldr r1,[sp,#4]` right before `index`'s one late use in
+the notify block) - a different but equally valid 8-registers-plus-1-spill
+resolution of the same 9-way pressure, just with the two builds' allocators
+picking a different loser.
+
+**Six more concretely-targeted techniques tried against this specific
+competition, all negative:**
+1. Decoupling `index`'s one late reuse (`pkt[9] = index`) into a fresh local
+   (`idx = index` right after the guard clause, use `idx` at the late site) - no
+   effect on register assignment at all.
+2. Moving `cur = chunk`'s initialization from the very top of the function to
+   just before the loop (matching target's own prologue, which initializes
+   `chunk`→`[sp+0]` LAST among the parameter shuffling, not first) - no effect;
+   confirms this specific allocator decision isn't driven by simple textual
+   statement order (plausible for a full-function liveness/interference-graph
+   allocator rather than a greedy left-to-right one).
+3. Forcing the redundant-read pattern explicitly at the C level
+   (`pktSrc = cur; p = pktSrc + chunkLen;` instead of deriving `p` from `cur`
+   directly) - mwcc's CSE saw through the syntactic decoupling and merged the
+   values back into one register anyway; textual restructuring alone doesn't
+   defeat value-based CSE on this compiler.
+4. `cur` as a 1-element array (`unsigned short *curArr[1]`, all uses rewritten to
+   `curArr[0]`) - the sm64ds-documented "stack-resident constants are a local
+   ARRAY, not volatile locals" lever. This compiler promotes small arrays back to
+   registers via SROA just as readily as the single-member struct tried earlier
+   (round 8) - no effect, identical register assignment.
+5. `register` storage-class hint on the `index` parameter specifically (not
+   previously tried on this exact parameter, only on locals elsewhere this
+   project) - ignored, as already established for every other `register` hint
+   tried at `-O4` this session.
+6. An explicit `ctx = ctx;` self-assignment right after `conn`'s setup, matching
+   a genuinely separate real difference spotted in target's prologue (target
+   loads the stack-passed `ctx` arg and immediately stores it back at
+   `[sp+0x40]`, very early - my candidates defer `ctx`'s only real access to its
+   actual use site deep in the notify block). This DID reproduce target's exact
+   early load-then-store-back shape when checked directly - a second, genuinely
+   separate confirmed micro-fact about target's structure - but cost 2 more
+   instructions elsewhere (0x210) and, critically, is independent of the
+   `sl` competition (`cur`/`chunk` still won `sl` over `index` even with this
+   applied). Worth keeping for a future combined draft; doesn't fix this
+   residual alone.
+
+A combinatorial sweep of all 8 combinations of (idx-decouple x cur-late-init x
+early-ctx) was run to check for an interaction effect none of the single-axis
+tests would show. The first pass appeared to find a real improvement (0x204,
+better than the 0x208 floor every single-axis attempt had hit) - **this was
+a bug, not a result**: the sweep script's second string replacement silently
+failed to match after the first had already edited the text, so the generated
+candidate was missing `cur`'s initialization entirely (a real, uninitialized-
+variable correctness bug that happened to compile smaller). Caught by checking
+`"cur = chunk;" in text` on the generated candidate before trusting the number,
+fixed the sweep to compose edits via non-overlapping anchors, and reran: **all 8
+combinations, correctly composed, land on 0x208 or worse - no interaction effect
+exists between these three specific axes.** Flagging the false lead explicitly
+here since this file is the project's record of what's actually been ruled out -
+an uncaught version of this bug would have wrongly closed off this combination
+space as "tried and failed" when the real (buggy) candidate was never a valid
+C program to begin with.
+
+**A properly-scoped, correctly-scored permuter run - clean negative, highest
+confidence result yet.** Two real problems with the prior permuter attempts were
+found and fixed this round: (1) `tools/permuter/import_func.py`'s
+`candidate_reloc_offsets()` compiled the raw seed directly to detect which byte
+offsets are relocations (to wildcard during scoring) - a seed containing
+`PERM_GENERAL`/`PERM_RANDOMIZE` macros isn't valid C on its own, so that compile
+silently failed and fell back to an empty reloc list, meaning the scorer
+compared 3 link-address-dependent words strictly instead of wildcarding them -
+an unreachable floor above 0 baked into every prior PERM-macro-based run's score
+(confirmed concretely: baseline score went from ~10915-11055 under the bug to
+~9745 after the fix - a large, real difference). Fixed by expanding PERM_ macros
+to one concrete candidate via decomp-permuter's own parser
+(`src.perm.parse.perm_parse` + `EvalState`, seed=0) before falling back to a real
+compile error - now a committed fix, not a one-off workaround. (2) Rather than
+mutating the whole function (diluting search effort across code that already
+matches) or hand-enumerating a fixed set of alternatives (limited by what a human
+thinks to write), wrapped just the `first`/`cur` test region in `PERM_RANDOMIZE`
+- real random mutation, concentrated entirely on the ~15 lines that are actually
+wrong. Ran for the full 1200s budget: 16,377 iterations, best score plateaued at
+8240, error count non-convergent (climbing 37→38 across the run) - no match
+found. This is the most rigorous, correctly-configured search run against this
+residual to date (properly scoped AND correctly scored, unlike every prior
+permuter attempt on this function), and it still didn't converge - strong
+evidence this residual is not permuter-reachable via random mutation regardless
+of scope.
+
+**Where this leaves it.** The mechanism is now understood with real precision
+(a straight `cur`-vs-`index` competition for one register, not a vague "cur needs
+to spill" framing), one genuinely new fix was found and banked (`first == 1`
+polarity), a second real micro-fact was confirmed (`ctx`'s early materialization
+shape), and a serious permuter tooling bug was found and fixed (benefits any
+future PERM-macro-based work on any function, not just this one). Despite all of
+that, no combination of source-level techniques tried - across roughly 60
+variants total this investigation, spanning every lever this project and its 13
+reference repos document for register-allocation steering - has flipped which of
+`cur`/`index` the allocator spills. This is now the most thoroughly searched
+single residual in this project's history (matching sm64ds-decomp's own
+"believed impossible, has been swept" category for comparably-resistant coloring
+walls). Not matched. Best candidate remains exact register SET (13/13), exact
+push/pop, exact total size (0x1fc) - everything except the literal final bytes.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
