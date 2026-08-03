@@ -76,10 +76,36 @@ def to_win(p):
     return str(pathlib.Path(p).resolve()).replace("\\", "/")
 
 
+def _expand_perm_macros(src_text):
+    """Resolve PERM_GENERAL/PERM_RANDOMIZE/etc. to one concrete (seed=0) candidate,
+    using decomp-permuter's own parser - the same code path permuter.py itself uses
+    to generate a compilable candidate from a seed containing those macros."""
+    perm_root = str(PERM_DIR)
+    added = perm_root not in sys.path
+    if added:
+        sys.path.insert(0, perm_root)
+    try:
+        from src.perm.parse import perm_parse
+        from src.perm.perm import EvalState
+        return perm_parse(src_text).evaluate(0, EvalState())
+    finally:
+        if added:
+            sys.path.remove(perm_root)
+
+
 def candidate_reloc_offsets(base_c_path, flags):
     """Compile the seed and read its .rel.text offsets - the authoritative
     set of reloc slots to wildcard (data-pool relocs included; the compiled
-    object is the source of truth, same as tools/match.py's oracle)."""
+    object is the source of truth, same as tools/match.py's oracle).
+
+    A seed containing PERM_ macros (PERM_GENERAL, PERM_RANDOMIZE, ...) is not
+    valid C on its own - mwccarm can't compile it, so a naive attempt silently
+    fails and this used to fall back to an empty reloc list. That's a real bug:
+    an empty list means those slots are compared strictly instead of wildcarded,
+    which can never match (their bytes depend on link-time addresses) - putting
+    an unreachable floor above 0 on every score. Expand PERM_ macros to one
+    concrete candidate (decomp-permuter's own parser, seed=0) before falling
+    back to a compile failure."""
     from elftools.elf.elffile import ELFFile
     import io
     with tempfile.NamedTemporaryFile(suffix=".o", delete=False) as f:
@@ -88,10 +114,32 @@ def candidate_reloc_offsets(base_c_path, flags):
         env = __import__("os").environ.copy()
         env["LM_LICENSE_FILE"] = str(LICENSE)
         cfile = pathlib.Path(base_c_path)
-        cpp = cfile.read_text(encoding="utf-8", errors="ignore").startswith("//cpp")
+        src_text = cfile.read_text(encoding="utf-8", errors="ignore")
+        cpp = src_text.startswith("//cpp")
         f2 = flags.replace("-lang c99", "-lang c++") if cpp else flags
-        subprocess.check_call([str(MWCC), *f2.split(), "-c", "-o", obj, str(cfile)],
-                              env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        def try_compile(text):
+            with tempfile.NamedTemporaryFile(
+                suffix=".cpp" if cpp else ".c", mode="w", delete=False, encoding="utf-8"
+            ) as tf:
+                tf.write(text)
+                src_path = tf.name
+            try:
+                subprocess.check_call([str(MWCC), *f2.split(), "-c", "-o", obj, src_path],
+                                      env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            finally:
+                try:
+                    __import__("os").remove(src_path)
+                except OSError:
+                    pass
+
+        try:
+            try_compile(src_text)
+        except subprocess.CalledProcessError:
+            if "PERM_" not in src_text:
+                raise
+            try_compile(_expand_perm_macros(src_text))
+
         with open(obj, "rb") as f:
             elf = ELFFile(io.BytesIO(f.read()))
             rel = elf.get_section_by_name(".rel.text") or elf.get_section_by_name(".rela.text")
