@@ -44,6 +44,9 @@ asm/
 # agent scratch (matched C gets promoted to src/)
 match/auto/
 scratch/
+extern/pattern_index.json
+extern/*/
+!extern/README.md
 
 # local-only, never commit
 /scratchpad/

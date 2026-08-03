@@ -1,0 +1,90 @@
+{
+  "project_name": "NDS Decomp Pattern Extractor & Cross-Referencer",
+  "version": "1.0.0",
+  "architectures": [
+    "ARM7TDMI",
+    "ARM966E-S"
+  ],
+  "sdk_prefixes": [
+    "OS_",
+    "OSi_",
+    "FS_",
+    "FSi_",
+    "MI_",
+    "MIi_",
+    "GX_",
+    "GXi_",
+    "SND_",
+    "SNDi_",
+    "CARD_",
+    "CARDi_",
+    "MATH_",
+    "MATHi_",
+    "RTC_",
+    "RTCi_",
+    "STD_",
+    "STDi_",
+    "NNS_",
+    "NNSi_",
+    "FX_",
+    "FXi_",
+    "SVC_"
+  ],
+  "msl_symbols": [
+    "__aeabi_idiv",
+    "__aeabi_uidiv",
+    "__aeabi_idivmod",
+    "__aeabi_uidivmod",
+    "__aeabi_memcpy",
+    "__aeabi_memset",
+    "__aeabi_memclr",
+    "memcpy",
+    "memset",
+    "memcmp",
+    "strcpy",
+    "strcmp",
+    "strlen",
+    "__divsi3",
+    "__modsi3",
+    "__udivsi3",
+    "__umodsi3"
+  ],
+  "assembly_categories": {
+    "cp15": {
+      "description": "ARM9 CP15 Coprocessor System Control",
+      "regex": "mcr\\s+p15|mrc\\s+p15"
+    },
+    "hardware_io": {
+      "description": "Nintendo DS Hardware Register IO Access",
+      "regex": "0x0400[0-9a-fA-F]{4}|REG_[A-Z0-9_]+"
+    },
+    "math_division": {
+      "description": "Hardware / Software Integer & Fixed-Point Division",
+      "regex": "REG_DIV|__aeabi_idiv|__aeabi_uidiv|__divsi3"
+    },
+    "bit_manipulation": {
+      "description": "Bit Field / Count Leading Zeros / CLZ operations",
+      "regex": "\\bclz\\b|\\bmovs?\\s+r\\d+,\\s*r\\d+,\\s*(lsr|lsl|asr|ror)"
+    },
+    "interrupt_control": {
+      "description": "CPSIE / CPSID / OS_DisableInterrupts patterns",
+      "regex": "\\bcpsie\\b|\\bcpsid\\b|OS_DisableInterrupts|OS_EnableInterrupts"
+    }
+  },
+  "search_directories": [
+    "extern",
+    "src",
+    "asm",
+    "include",
+    "drafts"
+  ],
+  "file_extensions": [
+    ".c",
+    ".cpp",
+    ".h",
+    ".hpp",
+    ".s",
+    ".asm",
+    ".inc"
+  ]
+}

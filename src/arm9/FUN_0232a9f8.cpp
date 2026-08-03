@@ -1,3 +1,4 @@
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x0232a9f8 name=FUN_0232a9f8
 struct Elem0232a9f8 { unsigned short f0; char pad[4]; };
 unsigned short FUN_0232a9f8(void) {
@@ -9,4 +10,6 @@ unsigned short FUN_0232a9f8(void) {
         p++;
     }
     return v;
+}
+
 }

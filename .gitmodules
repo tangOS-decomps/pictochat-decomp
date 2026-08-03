@@ -1,0 +1,39 @@
+[submodule "extern/sm64ds-decomp"]
+	path = extern/sm64ds-decomp
+	url = https://github.com/tangosdev/sm64ds-decomp.git
+	update = none
+
+[submodule "extern/pokeheartgold"]
+	path = extern/pokeheartgold
+	url = https://github.com/pret/pokeheartgold.git
+	update = none
+
+[submodule "extern/pokediamond"]
+	path = extern/pokediamond
+	url = https://github.com/pret/pokediamond.git
+	update = none
+
+[submodule "extern/mariokartds"]
+	path = extern/mariokartds
+	url = https://github.com/Mariokartds-decomp/mariokartds.git
+	update = none
+
+[submodule "extern/nsmb-decomp"]
+	path = extern/nsmb-decomp
+	url = https://github.com/nsmb-decomp/nsmb-decomp.git
+	update = none
+
+[submodule "extern/zelda-ph-decomp"]
+	path = extern/zelda-ph-decomp
+	url = https://github.com/zelda-ph-decomp/zelda-ph-decomp.git
+	update = none
+
+[submodule "extern/mph-decomp"]
+	path = extern/mph-decomp
+	url = https://github.com/metroid-prime-hunters/mph-decomp.git
+	update = none
+
+[submodule "extern/acww-decomp"]
+	path = extern/acww-decomp
+	url = https://github.com/acww-decomp/acww-decomp.git
+	update = none
