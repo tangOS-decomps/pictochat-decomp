@@ -1,3 +1,4 @@
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x0232c4dc name=FUN_0232c4dc
 struct G0232c4dc { unsigned short field0; };
 int FUN_0232c4dc(void) {
@@ -6,4 +7,6 @@ int FUN_0232c4dc(void) {
         return 0;
     }
     return 3;
+}
+
 }

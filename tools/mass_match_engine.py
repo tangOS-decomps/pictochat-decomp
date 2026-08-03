@@ -14,8 +14,8 @@ for sf in [syms_file9, syms_file7]:
                     parts = dict(p.split('=', 1) for p in line.strip().split() if '=' in p)
                     symbols_dict[parts['name']] = parts
 
-print("=== MASS AUTOMATED MATCHING ENGINE ===")
-print("Scanning all draft candidate files across drafts/arm9 and drafts/arm7...\n")
+print("=== MASS AUTOMATED MATCHING ENGINE ===", flush=True)
+print("Scanning all draft candidate files across drafts/arm9 and drafts/arm7...\n", flush=True)
 
 promoted_files = []
 
@@ -27,6 +27,7 @@ for ddir in [r'drafts\arm9', r'drafts\arm7']:
     files = [f for f in os.listdir(ddir) if f.endswith('.cpp')]
     for fname in files:
         fpath = os.path.join(ddir, fname)
+        print(f"Checking {fname}...", flush=True)
         with open(fpath, 'r') as fp: content = fp.read()
 
         matches = re.findall(r'//\s*decomp:\s*module=(\S+)\s+addr=(0x[0-9a-fA-F]+)\s+name=(\S+)', content)
@@ -65,6 +66,33 @@ for ddir in [r'drafts\arm9', r'drafts\arm7']:
                     matched_size = sz
                     break
 
+            if not is_match and 'extern "C"' not in content:
+                # Wrap with extern "C" and re-test
+                wrapped_content = f'extern "C" {{\n{content}\n}}\n'
+                with open(fpath, 'w') as fp: fp.write(wrapped_content)
+
+                for sz in size_candidates:
+                    cmd = [
+                        sys.executable, 'tools/match.py',
+                        '--c', fpath,
+                        '--func', name,
+                        '--addr', addr,
+                        '--size', sz,
+                        '--module', mod
+                    ]
+                    if is_arm7:
+                        cmd.extend(['--flags', '-O4,p -enum int -lang c++ -char signed -interworking -proc arm7tdmi -gccext,on -msgstyle gcc -Iinclude'])
+
+                    res = subprocess.run(cmd, capture_output=True, text=True)
+                    if ('MATCHING VERSIONS: dsi/1.3' in res.stdout or 'MATCHING VERSIONS: 1.' in res.stdout) and 'none' not in res.stdout:
+                        is_match = True
+                        matched_size = sz
+                        break
+
+                if not is_match:
+                    # Restore original content
+                    with open(fpath, 'w') as fp: fp.write(content)
+
             if is_match:
                 # Update symbol size if changed
                 if matched_size != orig_size_str:
@@ -84,8 +112,8 @@ for ddir in [r'drafts\arm9', r'drafts\arm7']:
                     os.rename(fpath, dst_path)
 
                 promoted_files.append((fname, dst_path, name, addr, matched_size))
-                print(f"  [100% BYTE MATCH PROMOTED] {fname} ({name} @ {addr}, size {matched_size}) -> {dst_path}")
+                print(f"  [100% BYTE MATCH PROMOTED] {fname} ({name} @ {addr}, size {matched_size}) -> {dst_path}", flush=True)
 
-print(f"\n========================================================")
-print(f"Mass Matching Engine Completed! Total Promoted: {len(promoted_files)}")
-print(f"========================================================\n")
+print(f"\n========================================================", flush=True)
+print(f"Mass Matching Engine Completed! Total Promoted: {len(promoted_files)}", flush=True)
+print(f"========================================================\n", flush=True)

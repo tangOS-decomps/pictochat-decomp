@@ -1,3 +1,4 @@
+extern "C" {
 // decomp: module=unk_autoload_0 addr=0x023260c4 name=FUN_023260c4
 struct S_023260c4 { int f0; int f4; };
 int FUN_023260c4(void) {
@@ -6,4 +7,6 @@ int FUN_023260c4(void) {
         return 1;
     }
     return 0;
+}
+
 }
