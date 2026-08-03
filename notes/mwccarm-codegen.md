@@ -95,6 +95,26 @@ sm64ds levers were tried against this specific residual and had **zero effect** 
   the result slightly *worse*, not better; no real evidence supports this signature
   change beyond the (unconfirmed) hypothesis.
 
+**Round 10** (testing whether this session's two `FUN_022d5a64` levers - volatile-on-
+parameter, u64-laundering the SPECIFIC mis-colored variable rather than its derivatives
+- generalize here; they don't):
+- `volatile unsigned short a0` (the twewy-sourced parameter lever that closed
+  `FUN_022d5a64`'s prologue/epilogue gap): regresses to 0x1fc (16 bytes over, vs v13's
+  4). `a0` here is used exactly once, right at function top - nothing like `FUN_022d5a64`'s
+  `ctx` (carried live across the whole function). The lever's mechanism (keeping a
+  stack-resident parameter materialized) has no purchase on a parameter that's already
+  dead after its first use. (mwccarm syntax note: `volatile` must precede the type in a
+  parameter decl - `unsigned short volatile a0` produces cascading unrelated-looking
+  "expression syntax error"s deep in the function body, a confusing failure mode.)
+- `char * volatile conn` (the lever applied directly to the mis-colored variable):
+  regresses further, 0x210 (36 bytes over) - forcing every use to reload from memory
+  is the opposite of what's needed (target keeps `conn` resident in one register the
+  whole function).
+- Re-ran u64-laundering on `conn` itself specifically (this section's existing bullet
+  says "5 candidate base pointers" were tried previously, but doesn't name `conn`
+  explicitly among them) - reconfirms the same zero-effect result: still 0x1f0,
+  `conn` still colors to `r4` per `fdiff.py --align`.
+
 **Where this leaves it**: `scratch/FUN_022d5870_v13.c` is the closest candidate found
 (123/123 instructions, one pure register permutation remaining). Not banked - still
 not byte-identical, and per this project's own standard that's not a match. Next
@@ -614,6 +634,51 @@ this round's regression rather than assumed. Reverted these changes - current be
 remains `scratch/FUN_022d5a64_BEST_dsi13.c` at 0x1f8 (4 bytes over 0x1fc), exact
 register set, both blocks flagged in earlier rounds now individually verified
 correct-shape-modulo-coloring rather than open questions.
+
+### Round 6, same session: two hypotheses disproven directly, one real structural fix (exact total SIZE match, still not byte-identical)
+
+**C++ member-function hypothesis, disproven.** Tested whether `FUN_022d5a64` is
+actually a non-static C++ member function (`ConnMgrClass::FUN_022d5a64`, real
+mangled symbol `_ZN12ConnMgrClass12FUN_022d5a64EjjPtjPv`, genuine implicit `this`
+instead of the free-function `G_023190dc` global lookup) - compiled both forms
+side by side at every opt level tried: byte-identical output. Member-function ABI
+is not the missing piece; the free-function form is exactly as good.
+
+**Full loop-body duplication, disproven.** The `first`-flag's role (round 3) is to
+pick between reading the header from `&a1` on iteration 1 vs from `cur` on later
+iterations. Tried the maximally literal reading of "target may not use a flag at
+all, just duplicated code" by peeling iteration 1 out as fully separate source (own
+`notify1` label, no shared boolean, `scratch/FUN_022d5a64_v19_fullpeel.c`): compiles
+to **0x354, roughly 2x target's 0x1fc**. The compiler does not merge the duplicated
+logic back down - proves target's real source shares the loop body via some flag
+mechanism (the `cur == chunk` implicit test already in use), not literal duplication.
+
+**subIndex shift-form fix - first-ever exact TOTAL SIZE match.** While auditing the
+4-byte gap (a real arithmetic correction this round: earlier text in this file said
+"2 bytes over" in several places - 0x1fc - 0x1f8 is actually 4 bytes / 1 whole
+instruction, not 2 - fixed throughout), re-examined every remaining diff block for
+an idiom-shaped residual rather than assuming it was pure coloring. Found one:
+`subIndex = (hdr & 0xf00) >> 8;` (a direct arithmetic right-shift) was written where
+target's real source apparently uses the shift-left-then-shift-right pair form -
+`subIndex = ((hdr & 0xf00) << 8) >> 16;` - mathematically identical, but selects a
+different instruction sequence (this is the exact same "shift-form idiom" class first
+noticed on `FUN_022d5870`'s mask computation: an `asr`/direct-shift single instruction
+vs an `lsl`+`lsr` pair). Applying the shift-left/shift-right pair form here **closed
+the gap to exact total size, 0x1fc == target's 0x1fc**, for the first time this
+function has ever hit its target size.
+
+**Not byte-identical even at exact size**: `tools/match.py` still reports
+`MATCHING VERSIONS: none`. Internally, the candidate decodes to 126 real instructions
+vs target's 127 - a genuine 1-instruction content gap (not literal-pool padding),
+concentrated in the first-loop-iteration entry block per a stack-offset audit (this
+candidate uses 5 distinct stack slots - `[sp+0]`,`[sp+4]`,`[sp+8]`,`[sp+0xc]`,`[sp+0x10]`
+- vs target's 3 - `[sp+0]`,`[sp+4]`,`[sp+8]`). Extended the round-5 grid search (more
+`first`-reintroduction combinations, layered on top of the shift-form fix; forced early
+`ctx` materialization via self-assignment; redundant-recompute splitting of the
+`cur == chunk` test itself) - no combination improved past this point. **Current best
+remains `scratch/FUN_022d5a64_BEST_dsi13.c`**, now updated with the shift-form fix:
+exact register set, exact push/pop, exact total size (0x1fc), a real 1-instruction
+content gap concentrated in the iteration-1 entry path, still not byte-identical.
 
 ## 4. Where to look next
 
