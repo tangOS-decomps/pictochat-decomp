@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ndsDecomp viewer</title>
+<style>
+  :root {
+    --bg: #1e1f22; --panel: #26272b; --border: #3a3b40; --text: #ddd; --dim: #888;
+    --match: #1f3d1f; --match-text: #7fd97f;
+    --color: #3d3a1f; --color-text: #d9c97f;
+    --diff: #3d1f1f; --diff-text: #ff8f8f;
+    --reloc: #1f2f3d; --reloc-text: #7fb8d9;
+    --accent: #5b9dd9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, sans-serif; font-size: 13px; }
+  #topbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  #topbar label { color: var(--dim); font-size: 11px; margin-right: 2px; }
+  select, input[type=text] { background: #1a1b1e; color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-family: inherit; font-size: 12px; }
+  input[type=text] { width: 90px; }
+  #flagsInput { width: 340px; }
+  button { background: var(--accent); color: #fff; border: none; border-radius: 4px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  button.secondary { background: #444; }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { margin-left: auto; font-size: 12px; white-space: nowrap; }
+  #status.ok { color: var(--match-text); font-weight: 600; }
+  #status.bad { color: var(--diff-text); }
+  #main { display: flex; height: calc(100vh - 46px); }
+  #editorPane { width: 38%; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+  #editorHead { padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  #editorHead .path { color: var(--dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #srcEditor { flex: 1; background: #17181a; color: #e8e8e8; border: none; padding: 10px; font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; line-height: 1.5; resize: none; outline: none; white-space: pre; overflow: auto; tab-size: 4; }
+  #diffPane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #diffHead { display: flex; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--dim); }
+  #diffHead > div { flex: 1; }
+  #diffScroll { flex: 1; overflow: auto; font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+  table.diff { border-collapse: collapse; width: 100%; }
+  table.diff td { padding: 1px 8px; white-space: pre; border-bottom: 1px solid #222; }
+  table.diff td.off { color: var(--dim); width: 60px; user-select: none; }
+  table.diff td.hex { color: #666; width: 90px; }
+  table.diff tr.match td.txt { color: var(--text); }
+  table.diff tr.match { background: transparent; }
+  table.diff tr.color td.txt { background: var(--color); color: var(--color-text); }
+  table.diff tr.diff td.txt { background: var(--diff); color: var(--diff-text); }
+  table.diff tr.reloc td.txt { background: var(--reloc); color: var(--reloc-text); }
+  table.diff td.empty { color: #444; font-style: italic; }
+  #legend { display: flex; gap: 14px; padding: 4px 10px; font-size: 11px; color: var(--dim); background: var(--panel); border-top: 1px solid var(--border); }
+  #legend span { display: inline-flex; align-items: center; gap: 4px; }
+  #legend i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
+  #placeholder { padding: 30px; color: var(--dim); text-align: center; }
+  #funcSearch { width: 160px; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <label>Function</label>
+  <input id="funcSearch" type="text" placeholder="filter...">
+  <select id="funcSelect"><option>Loading...</option></select>
+  <label>File</label>
+  <select id="fileSelect"></select>
+  <label>Compiler</label>
+  <select id="versionSelect"></select>
+  <label>Flags override</label>
+  <input id="flagsInput" type="text" placeholder="(auto from // flags: marker / defaults)">
+  <button id="compileBtn">Compile &amp; Diff</button>
+  <button id="saveBtn" class="secondary">Save draft</button>
+  <div id="status"></div>
+</div>
+<div id="main">
+  <div id="editorPane">
+    <div id="editorHead"><span class="path" id="editorPath">no file selected</span></div>
+    <textarea id="srcEditor" spellcheck="false" placeholder="Pick a function above to load its draft C source here."></textarea>
+  </div>
+  <div id="diffPane">
+    <div id="diffHead"><div>ROM (target)</div><div>Candidate (compiled)</div></div>
+    <div id="diffScroll"><div id="placeholder">Pick a function, then hit Compile &amp; Diff.</div></div>
+  </div>
+</div>
+<div id="legend">
+  <span><i style="background:var(--match)"></i>byte match</span>
+  <span><i style="background:var(--color)"></i>same shape, different register (coloring only)</span>
+  <span><i style="background:var(--reloc)"></i>relocation slot (wildcarded)</span>
+  <span><i style="background:var(--diff)"></i>real mismatch (extra/missing/wrong instruction)</span>
+</div>
+<script>
+let candidates = [];
+let currentGroup = null;
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+function fmtAddr(a) { return '0x' + a.toString(16); }
+
+async function loadCandidates() {
+  candidates = await api('/api/candidates');
+  const versions = await api('/api/versions');
+  const vsel = document.getElementById('versionSelect');
+  vsel.innerHTML = '';
+  for (const v of versions.sweep) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v + (v === versions.canonical ? '  (canonical)' : '');
+    if (v === versions.canonical) o.selected = true;
+    vsel.appendChild(o);
+  }
+  renderFuncList();
+}
+
+function renderFuncList(filter) {
+  const sel = document.getElementById('funcSelect');
+  sel.innerHTML = '';
+  const f = (filter || '').toLowerCase();
+  const filtered = candidates.filter(c => !f || c.name.toLowerCase().includes(f) || c.module.includes(f));
+  for (const c of filtered) {
+    const o = document.createElement('option');
+    o.value = c.module + '|' + c.addr;
+    const nm = c.files.some(x => x.nonmatching) ? ' [parked]' : '';
+    o.textContent = `${c.name}  (${c.module} ${fmtAddr(c.addr)}, ${c.files.length} file${c.files.length>1?'s':''})${nm}`;
+    sel.appendChild(o);
+  }
+  if (filtered.length) {
+    sel.value = filtered[0].module + '|' + filtered[0].addr;
+    onFuncChange();
+  } else {
+    document.getElementById('fileSelect').innerHTML = '';
+  }
+}
+
+function onFuncChange() {
+  const [module, addr] = document.getElementById('funcSelect').value.split('|');
+  currentGroup = candidates.find(c => c.module === module && String(c.addr) === addr);
+  const fsel = document.getElementById('fileSelect');
+  fsel.innerHTML = '';
+  if (!currentGroup) return;
+  for (const f of currentGroup.files) {
+    const o = document.createElement('option');
+    o.value = f.path;
+    o.textContent = f.path + (f.nonmatching ? '  [NONMATCHING]' : '') + (f.editable ? '' : '  [read-only]');
+    fsel.appendChild(o);
+  }
+  onFileChange();
+}
+
+async function onFileChange() {
+  const path = document.getElementById('fileSelect').value;
+  if (!path) return;
+  document.getElementById('editorPath').textContent = path;
+  const data = await api('/api/source?path=' + encodeURIComponent(path));
+  const ed = document.getElementById('srcEditor');
+  ed.value = data.content || ('// error: ' + data.error);
+  ed.readOnly = !data.editable;
+  document.getElementById('saveBtn').disabled = !data.editable;
+  // pull the // flags: marker into the override box as a starting point, not forced
+  const m = /\/\/ flags: (.*)/.exec(data.content || '');
+  document.getElementById('flagsInput').value = '';
+  document.getElementById('flagsInput').placeholder = m
+    ? `(marker in file: ${m[1]})` : '(auto from defaults)';
+}
+
+function rowHtml(side, row) {
+  if (!row) return '<td class="off"></td><td class="hex"></td><td class="txt empty">(none)</td>';
+  return `<td class="off">+0x${row.offset.toString(16)}</td><td class="hex">${row.hex}</td><td class="txt">${escapeHtml(row.text)}</td>`;
+}
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderDiff(result) {
+  const el = document.getElementById('diffScroll');
+  if (!result.ok) {
+    el.innerHTML = `<div id="placeholder" style="color:#ff8f8f;text-align:left;white-space:pre-wrap">${escapeHtml(result.error)}</div>`;
+    setStatus(false, result.error);
+    return;
+  }
+  let html = '<table class="diff"><tbody>';
+  for (const row of result.rows) {
+    html += `<tr class="${row.status}">${rowHtml('t', row.target)}${rowHtml('c', row.candidate)}</tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+  const label = result.match
+    ? `MATCH — ${result.candidate_size} bytes, ${result.version_used}`
+    : `${result.ndiff}/${result.total_words} word(s) differ — target ${result.target_size}B vs candidate ${result.candidate_size}B (ghidra size: ${result.ghidra_size ?? '?'})`;
+  const note = result.mangled_note ? `  |  ⚠ ${result.mangled_note}` : '';
+  setStatus(result.match, label + `  |  flags: ${result.flags_used}` + note);
+}
+
+function setStatus(ok, text) {
+  const s = document.getElementById('status');
+  s.textContent = text;
+  s.className = ok ? 'ok' : 'bad';
+}
+
+async function doCompile() {
+  if (!currentGroup) return;
+  const btn = document.getElementById('compileBtn');
+  btn.disabled = true;
+  setStatus(false, 'compiling...');
+  try {
+    const payload = {
+      source: document.getElementById('srcEditor').value,
+      func: currentGroup.name,
+      module: currentGroup.module,
+      addr: currentGroup.addr,
+      version: document.getElementById('versionSelect').value,
+      flags: document.getElementById('flagsInput').value || null,
+    };
+    const result = await api('/api/compile', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    renderDiff(result);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doSave() {
+  const path = document.getElementById('fileSelect').value;
+  const content = document.getElementById('srcEditor').value;
+  const r = await api('/api/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({path, content})
+  });
+  if (r.ok) setStatus(true, 'saved ' + path);
+  else setStatus(false, 'save failed: ' + r.error);
+}
+
+document.getElementById('funcSelect').addEventListener('change', onFuncChange);
+document.getElementById('fileSelect').addEventListener('change', onFileChange);
+document.getElementById('compileBtn').addEventListener('click', doCompile);
+document.getElementById('saveBtn').addEventListener('click', doSave);
+document.getElementById('funcSearch').addEventListener('input', e => renderFuncList(e.target.value));
+document.getElementById('srcEditor').addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); const t=e.target; const s=t.selectionStart,en=t.selectionEnd; t.value=t.value.slice(0,s)+'    '+t.value.slice(en); t.selectionStart=t.selectionEnd=s+4; }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') doCompile();
+});
+
+loadCandidates();
+</script>
+</body>
+</html>
