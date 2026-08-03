@@ -282,9 +282,23 @@ re-deriving a large-function strategy from scratch. See
 catalogue of confirmed compiler-behavior levers (mined from sm64ds-decomp's
 much larger version of the same file and verified against real targets here)
 - check it before spending time re-deriving a register-coloring or
-instruction-selection fix that's already been found. A few concrete,
-transferable findings pulled from their `research-matching-levers.md` and
-`crack-loop-runbook.md`:
+instruction-selection fix that's already been found.
+
+Beyond sm64ds-decomp specifically, this project maintains a small library of
+other real NDS/mwccarm decomp projects as reference material - see
+[extern/README.md](../extern/README.md) for the registered repo list and
+`tools/manage_extern.py`/`tools/cross_reference.py` for cloning and searching
+them. `cross_reference.py notes <query>` full-text-searches every extern
+repo's own codegen/lever documentation (the fastest way to check whether
+another project has already solved a given quirk); `search --category <cat>`
+greps their matched C source directly for the raw idiom (shift-truncation
+pairs, conditional-select pairs, hand-written regalloc-quirk comments,
+volatile-for-codegen use - see `config/extern_config.json` for the full
+category list). None of these repos are checked out by a fresh clone of this
+project by default - run `manage_extern.py clone all` first.
+
+A few concrete, transferable findings pulled from sm64ds-decomp's own
+`research-matching-levers.md` and `crack-loop-runbook.md`:
 
 - **Permuter's limits are confirmed upstream, not just observed here.**
   Their own research doc quotes the permuter author: it's "generally best
