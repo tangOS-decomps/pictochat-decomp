@@ -538,6 +538,54 @@ correspond to slots target doesn't have, by comparing stack offset usage
 instruction-by-instruction (not yet done this round - ran out of time on the`volatile`
 sweep axis before starting the stack-offset audit).
 
+### Round 4, same session: found a real-world precedent via actual ARM/NDS mwccarm source, closed to 2 bytes
+
+Per direct instruction to research rather than guess: searched beyond sm64ds-decomp and
+pret (both GameCube/PS2-adjacent or, for pret, not yet at this level of `volatile`
+idiom documentation) for an ACTUAL mwccarm decomp targeting this same platform (NDS
+ARM). Found two real ones on `decomp.wiki`'s project list - `Yotona/twewy` (The World
+Ends With You) and `Eebit/fe11-us` (Fire Emblem: Shadow Dragon) - both real mwccarm/NDS
+codebases, cloned/searched via `gh search code`.
+
+**Found the exact idiom class in `twewy`'s `src/Engine/Core/OamMgr.c`**: a function
+(`func_02003ef4`) with the identical symptom this project has been fighting -
+"Nonmatching: Regswaps, argument spills are ordered differently" - uses **`volatile`
+directly on function PARAMETERS** in the signature (`volatile s32 arg5, volatile s32
+arg6`), and a sibling pattern (`volatile u16* const pArg4 = &arg4;`) taking a volatile
+pointer straight to a parameter (not a local copy - copying first breaks the mechanism,
+confirmed empirically below). This is a real, currently-used technique in an actual
+matched-adjacent mwccarm/NDS codebase for exactly this symptom class, not something
+inferred abstractly.
+
+**Applied directly: `volatile`-qualifying the `ctx` parameter** (the 5th, stack-passed
+argument) on top of the existing `cur == chunk` + `volatile consumed` base **closed the
+prologue AND epilogue to an exact match** - `pop {r4,r5,r6,r7,r8,sb,sl,fp,lr}` is now
+byte-identical to target, zero duplicates, for the first time. Total size **0x1f8 vs
+target's 0x1fc - 2 bytes**, the closest this function has ever been by a wide margin.
+
+Swept every other single parameter as the volatile target (`index`, `a1`, `chunk`,
+`len`) both alone and stacked on top of the working `ctx` version - `ctx` alone is
+uniquely the one that gives a clean push AND the smallest size; every other parameter
+either breaks the clean push again or doesn't help. Confirmed the twewy repo's own
+"copy to a local first, then take a volatile pointer to the copy" sub-pattern does NOT
+transfer to `a1` here (copying breaks the arg-spill-preserving mechanism specifically
+because it stops reusing the ORIGINAL incoming register's own stack-spilled address -
+`&a1` needs to point at the real parameter, not a fresh local, for this function).
+
+**Current best: `scratch/FUN_022d5a64_BEST_dsi13.c`** (`cur == chunk` implicit test +
+`volatile unsigned int consumed` + `volatile void *ctx` parameter, `dsi/1.3`,
+`-O4,s`) - exact register set, exact push AND pop instructions, frame `0x14` vs
+target's `0xc` (2 stack words), **2 bytes total**. Remaining diff (`fdiff --align`,
+26 blocks) is now overwhelmingly plain register coloring (`sb`/`sl`, `r4`/`r5`/`r6`
+swaps) plus the same `moveq`/`movne` polarity flip on the `v30`/`v32` swap-pick logic
+noted in round 1 - re-derived the source logic against the original Ghidra pseudocode
+and confirmed the C is correct (`pkt[0x21] = flag ? v30 : v32`, matches exactly);
+the polarity flip is downstream coloring from an equivalent computation, not a bug.
+Tried `volatile` on `v30`/`v32` directly and on `pktSrc`+`afterHdr` together - neither
+closes the last 2 bytes; next angle is the coloring residuals directly (declaration-
+order or access-expression levers per section 1, not yet re-swept against this exact
+2-byte-away candidate).
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
