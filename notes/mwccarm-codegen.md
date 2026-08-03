@@ -680,6 +680,179 @@ remains `scratch/FUN_022d5a64_BEST_dsi13.c`**, now updated with the shift-form f
 exact register set, exact push/pop, exact total size (0x1fc), a real 1-instruction
 content gap concentrated in the iteration-1 entry path, still not byte-identical.
 
+### Round 7 - root cause of the 1-instruction gap identified precisely (via extern/ cross-reference tooling + raw disasm), still not fixed
+
+Used `tools/cross_reference.py notes` to search extern repos' own codegen docs for
+this residual's shape before guessing blind again - no direct hit, but it steered
+toward re-reading the target's raw disassembly (`tools/disasm.py`, not the noisy
+`fdiff --align` view) end to end, which found the real mechanism:
+
+**The `cur == chunk` implicit test (this project's own best lever, section above)
+is provably TRUE on the very first loop entry - mwccarm exploits that.** Since
+`cur = chunk;` is assigned immediately before the loop, the compiler can statically
+resolve the first pass's outcome and PARTIALLY PEELS the iteration-1 header-read
+path (the `p = &a1; hdr = *p;` computation and its immediate consumers - the
+`(hdr&0xff)`-derived `chunkLen`/flag-bit work) out of the loop into the function's
+lead-in block, rather than leaving it as a runtime-tested branch inside the shared
+loop body. Target's real source does NOT get this treatment: it uses a genuine
+runtime-tested `first` flag (`mov r0,#1; str r0,[sp,#8]; b <loop-condition-test>`,
+then `ldr r0,[sp,#8]; cmp r0,#1` inside the shared loop body, `first` cleared to 0
+only inside the `first==1` arm, `hdr = *p` read unconditionally after) - a shape
+this project's earlier grid search (round 5) never modeled exactly (it always
+tested `first = 0;` written unconditionally after both arms, not conditionally
+inside just the `if` arm, and `hdr = *p` duplicated in both arms rather than
+hoisted after). Block-by-block delta accounting on `fdiff --align`'s output
+(target[26:40] = 14 real instructions vs candidate[27:36] = 9) confirms this is
+where essentially all of the net 1-instruction gap actually lives - everything
+else in the 27 non-equal blocks is downstream coloring/scheduling noise from this
+one structural difference, not independent content gaps.
+
+**Two precise, well-targeted fixes tried against this exact mechanism, both
+regressed:**
+1. **Reproduce target's exact `first`-flag shape** (conditional-only reset inside
+   the `if` arm, `hdr = *p` hoisted after the if/else instead of duplicated inside
+   both arms - `scratch/FUN_022d5a64_v21_hoistread.c`). Regressed to 0x208 (129
+   instructions, +2 vs target): reintroducing `first` as a named variable at all
+   costs a register regardless of the precise internal shape (candidate's push set
+   grew to 10 registers, `r3` included, vs the correct 9) - this reconfirms round
+   5's finding from a different angle rather than escaping it. The register-cost
+   problem and the peeling problem are apparently two independent costs of the same
+   underlying tension, and fixing the peeling by bringing `first` back doesn't
+   avoid paying the register cost.
+2. **`unsigned short * volatile cur`** (defeat the compiler's static proof that
+   `cur == chunk` on first entry, the same "volatile-in-condition defeats CSE per
+   branch arm" lever sm64ds-decomp's own notes document for an analogous case -
+   `scratch/FUN_022d5a64_v22_volatile_cur.c`). Regressed heavily, 0x214: volatile
+   on the whole pointer forces a reload at every one of `cur`'s several uses
+   through the function, not just at the peeling-triggering comparison - far too
+   blunt an instrument for this specific case.
+
+**Not resolved.** The mechanism is now understood precisely (a genuine, nameable
+compiler behavior - static branch-outcome peeling on a provably-true first-loop-
+entry condition - not a mystery), which is real progress over "1-instruction gap,
+location unknown" from round 6, but no source-level phrasing tried yet avoids
+paying either the register cost (reintroducing `first`) or the peeling cost
+(keeping `cur == chunk`) simultaneously.
+
+### Round 8 - direct instruction from the user to reach byte-exact; ~12 more variants, a full permuter run, and a second independent micro-issue found - still not matched
+
+Per explicit direction that this must reach 100%, not be banked as a documented
+near-miss. Tried every remaining angle that could be reasoned about concretely
+rather than guessed blind:
+
+**The narrower volatile-barrier idea from round 7's "next steps" - tried, also
+too blunt.** `*(unsigned short * volatile *)&cur == chunk` (a scoped volatile
+read of `cur`'s value at only the comparison site, not qualifying `cur` itself -
+`scratch/FUN_022d5a64_v23_volread_cmp.c`). Regressed to 0x214, identical to full
+`volatile cur`: taking `&cur` at all forces the variable out of register
+allocation for the WHOLE function (address-taken locals can't live purely in a
+register on this compiler), not just at the read site - the same cost as full
+qualification, just reached by a different route.
+
+**Manually writing the peel as a `goto` instead of relying on `cur == chunk` to
+trigger it implicitly** (`scratch/FUN_022d5a64_v24_gotopeeled.c`: read `&a1`
+directly before the loop, `goto` into a label inside the loop body, no comparison
+at all). Regressed further than expected - 123 instructions (candidate now SHORT
+by 4, not just 1) and the register push grew to 10 (`r3` included) anyway. Tried
+consolidating the duplicated `val = 0xFFFF` into the shared label instead of
+before the goto too (`v30_gotopeeled_v2.c`) - made it dramatically worse in a
+different direction (119 instructions but 12 registers pushed, the compiler
+apparently choosing to keep MORE state live in registers across the whole
+function once the code got shorter). Neither goto variant beats the implicit
+`cur == chunk` form.
+
+**`volatile int first` retested now that the shift-form fix (round 6) is in
+place** (round 5's grid search predates that fix). Two internal shapes tried,
+both land at exactly 0x208 regardless: the original round-3 shape (`first = 0`
+unconditional after the if/else, `hdr = *p` duplicated in both arms -
+`v25_volfirst_plus_shiftfix.c`) and the more precise target-matching shape
+(conditional-only reset, hoisted read - `v26_volfirst_hoistread.c`). Declaration
+position of `first` (top of the variable list vs its original position -
+`v27_volfirst_declfirst.c`) also made no difference. `volatile`'s forced-real-
+memory-op semantics apparently make these C-level orderings equivalent to the
+compiler - it was worth checking given the shift-fix interaction was genuinely
+untested, but the answer is a clean, confirmed no.
+
+**Representation swap: track position via an integer byte offset (`off`) instead
+of a raw pointer (`cur`), testing `off == 0` instead of `cur == chunk`**
+(`scratch/FUN_022d5a64_v29_offset.c`) - on the theory that a constant-vs-variable
+comparison might dodge the same static-peeling treatment a pointer-identity
+comparison gets. It doesn't: regressed to 0x208, confirming the peeling
+optimization keys on "is this value's precise content known at this program
+point," not on the compared value's type or shape.
+
+**Compiler-help-driven levers, both tried:** the compiler's own `-help
+opt=option` text ties "loop transformations, loop-invariant code motion"
+specifically to level 3+, suggesting level 1/2 might dodge the peeling entirely.
+- All 15 individual `-opt [no]cse/deadcode/deadstore/lifetimes/loopinvariants/
+  prop/strength` toggles, standalone, against the `BEST_dsi13.c` base - zero
+  byte-level effect on every single one (same signature already established for
+  `FUN_022d5870`'s wall - this compiler build's peephole/front-end folding
+  clearly isn't gated by any of the named, documented optimization passes).
+- `-opt level=1,space` / `level=2,space` / `-O1,s` / `-O2,s` - levels 1 and 2
+  regress badly (0x230, more registers spilled, the compiler apparently needing
+  higher opt levels just to reach the already-established 9-register baseline);
+  level 2 alone reproduces `-O4,s`'s exact byte output (126/127, same 27 diff
+  blocks) - the peeling happens even at the lowest level that still hits the
+  right register count, confirming it's baked into basic constant propagation /
+  dead-branch folding, not the documented level-3+ "loop transformations" pass
+  specifically.
+- u64-mask laundering (section 6h) applied to the `cur = chunk` assignment
+  itself, not a derived pointer (`scratch/FUN_022d5a64_v28_launder_curinit.c`) -
+  zero effect, this build folds the all-ones mask away here too, consistent with
+  every other laundering attempt on this project so far.
+
+**decomp-permuter, 300s / 3557 iterations, seeded from `BEST_dsi13.c`**
+(`tools/permuter/import_func.py` + `winproc.py --secs 300`). Best score plateaued
+in the 9600-12700 range with error count climbing monotonically (36 -> 44) over
+the run, never trending toward 0 or converging - the identical non-convergent
+drift signature already documented for `FUN_022d5870`'s permuter runs (rounds 4
+and 8 there). Confirms this residual is still scored in the structural
+(insertion/deletion) tier, not pure coloring, despite the exact-size/near-exact-
+instruction-count property that made it look promising - the permuter cannot
+resolve a genuine content/structure difference by shuffling statements.
+
+**A second, independent micro-issue found and investigated (not the peeling
+issue - a different block entirely), still open.** `fdiff --align`'s per-block
+delta accounting (candidate_count - target_count summed across all 27 blocks)
+confirms the entry-peeling region is NOT the only source of the net -1 instruction
+gap - several smaller blocks elsewhere also contribute, netting the total. One
+specific block in the mask/ack-window comparison (`val = (unsigned short)(val <<
+1); if ((unsigned short)(existing - val) < 0x100)`) shows target using an
+UN-fused `lsl r7,r7,#1` + `sub r3,r3,r7` pair (2 plain instructions, truncating
+only the SUBTRACTION result afterward) while every phrasing tried here either:
+(a) reproduces that exact unfused shape but with an extra truncation-pair
+overhead (`val`'s assignment truncating `val<<1` a beat too early - the original,
+`BEST_dsi13.c`'s shape), or (b) lets mwcc's peephole FUSE the shift directly into
+the subtract's shifter operand (`sub ip,r0,r8,lsl #1` - single instruction,
+shorter than target) the moment the shifted value is used inline in the
+subtraction rather than stored to a real variable first, even when routed
+through a freshly-named `int` temp (`v31_deferred_trunc.c`, `v32_named_shifted.c`
+- both land at 0x200, an even worse regression, confirming naming a temp does not
+block this specific peephole on this compiler). Grepped extern repos' real
+matched C source (not just docs) for this "windowed sequence-number comparison"
+idiom (`(u16)(a-b) < threshold`, a recognizable networking pattern) looking for
+a real precedent of the unfused shape - no exact hit in twewy/fe11-us/khdays-
+decomp/sm64ds-decomp's checked-out source.
+
+**Where this leaves it, honestly:** ~34 total source variants across 8 rounds
+this session, a full 15-flag pragma sweep, 4 opt-level points, one u64-laundering
+attempt on every plausible target, and a 3557-iteration permuter run - the widest
+search this project has run against any single residual. `BEST_dsi13.c` remains
+the best candidate: exact register set (13/13), exact push AND pop, exact total
+size (0x1fc), 126 vs target's 127 real instructions, two independently-diagnosed
+but unresolved micro-mechanisms (first-iteration branch peeling; a shift/subtract
+fusion-vs-truncation tension in the ack-window compare). Not byte-identical.
+Genuinely untried next steps, in rough order of promise: (1) let the permuter run
+substantially longer (hours, not 300s) on the theory that its non-convergence at
+3557 iterations doesn't rule out a later basin - the project's own crack-loop
+precedent treats 800 iterations as a floor-confirmation bar, not an upper bound;
+(2) a combinatorial declaration-order + structural-axis sweep in the style of
+`tools/frame_search.py`, scoped to this function's specific variables, rather
+than the hand-picked single-axis changes tried so far; (3) clone and grep a wider
+set of extern repos' real matched source (not just the 13 currently registered)
+for the exact unfused shift-subtract-truncate shape.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
