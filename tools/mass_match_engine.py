@@ -101,7 +101,7 @@ for ddir in [r'drafts\arm9', r'drafts\arm7']:
                     
                     if os.path.exists(target_sym_file):
                         with open(target_sym_file, 'r') as sf: lines = sf.readlines()
-                        lines = [re.sub(fr'name={re.escape(name)}.*size=0x[0-9a-fA-F]+', f'name={name} addr={addr} size={matched_size}', l) for l in lines]
+                        lines = [re.sub(fr'name={re.escape(name)}.*size=0x[0-9a-fA-F]+', f'name={name} module={mod} addr={addr} size={matched_size}', l) for l in lines]
                         with open(target_sym_file, 'w') as sf: sf.writelines(lines)
 
                 # Promote file from drafts to src
