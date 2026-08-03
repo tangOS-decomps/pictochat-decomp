@@ -10,7 +10,17 @@ Usage:
   python tools/cross_reference.py scrape [--extern-dir DIR] [--output INDEX_FILE]
   python tools/cross_reference.py search [--name NAME] [--asm QUERY] [--category CAT] [--repo REPO]
   python tools/cross_reference.py cross-match [--funcs-file JSON_FILE] [--min-score SCORE]
+  python tools/cross_reference.py notes QUERY [--context N]
   python tools/cross_reference.py info
+
+For "I have a weird instruction sequence in the target ROM, what C produces it":
+  1. `notes` first - search other decomp projects' own hand-written codegen-lever
+     docs (e.g. sm64ds-decomp/notes/mwccarm-codegen.md) for the idiom by name/keyword.
+     Someone on the same toolchain may have already solved and documented it.
+  2. `search --category <cat>` - grep extern repos' matched C source for the raw
+     idiom itself (shift-truncation pairs, movne/moveq conditional selects, hand-
+     written "// to match this compiler quirk" comments, volatile-for-codegen use).
+     See config/extern_config.json's assembly_categories for the full list.
 """
 
 import argparse
@@ -71,9 +81,16 @@ class PatternScraper:
 
         # 1. Function definitions & SDK symbols in C/C++
         if ext in (".c", ".cpp", ".h", ".hpp"):
-            # C Function pattern matching
+            # C Function pattern matching. No leading "(?:word\s+)+" return-type group -
+            # it's unnecessary (the name capture below already anchors on \w+ right before
+            # the paren) and was a real ReDoS: on any `extern void f(void);`-style
+            # declaration-only line (no trailing `{`), that nested quantifier forces
+            # catastrophic backtracking while trying every split before failing. Real repos
+            # (khdays-decomp) ship thousands of exactly this file shape (asm_stubs/calls/*.c,
+            # pure extern-declaration lists) - confirmed hanging for 90+s on a single 9.5KB
+            # file before this fix.
             func_regex = re.compile(
-                r"(?:[a-zA-Z0-9_]+\s+)+(\b(?:[A-Z0-9_]+_)?\w+)\s*\(([^;{]*)\)\s*\{"
+                r"(\b(?:[A-Z0-9_]+_)?\w+)\s*\(([^;{]*)\)\s*\{"
             )
             for m in func_regex.finditer(content):
                 func_name = m.group(1)
@@ -262,12 +279,15 @@ def run_search(index_path: pathlib.Path, name: Optional[str], asm: Optional[str]
         rrepo = r.get("repo", "unknown")
         rfile = r.get("file", "unknown")
         rline = r.get("line", 0)
-        snippet = r.get("snippet") or r.get("match") or r.get("sample") or ""
-        first_line = snippet.splitlines()[0] if snippet else ""
+        # Prefer the actual regex match text (precise) over the wider context window,
+        # whose "first line" is often blank or unrelated to what actually matched -
+        # collapse whichever we show onto one line so it's a useful single-line preview.
+        preview = r.get("match") or r.get("snippet") or r.get("sample") or ""
+        preview = " ".join(preview.split())
 
         print(f"[{rrepo}] {rtype} '{rname}' in {rfile}:{rline}")
-        if first_line:
-            print(f"   Snippet: {first_line[:100]}")
+        if preview:
+            print(f"   Snippet: {preview[:160]}")
     if len(results) > 50:
         print(f"... and {len(results) - 50} more results.")
 
@@ -323,13 +343,61 @@ def run_cross_match(index_path: pathlib.Path, funcs_file: pathlib.Path):
             print(f"  Extern Repo: [{ext_info['repo']}] {ext_info['file']}:{ext_info.get('line', 0)}")
             print("-" * 50)
 
+    else:
+        print(f"Note: Local functions cache {funcs_file} not found. Generating matches from local drafts/asm instead.")
+
     # Show category distribution across external reference projects
     print("\nExternal Reference Assembly Idioms & Hardware Patterns Available:")
     print("=" * 80)
     for cat, items in extern_categories.items():
         print(f"  Category '{cat}': {len(items)} reference implementations across {len(set(x['repo'] for x in items))} repos")
-    else:
-        print(f"Note: Local functions cache {funcs_file} not found. Generating matches from local drafts/asm instead.")
+
+
+def run_notes(extern_dir: pathlib.Path, query: str, context: int):
+    """Full-text search across every markdown/doc file in extern/ repos.
+
+    This is the highest-signal search available: several extern decomp projects
+    (sm64ds-decomp most notably) keep a hand-written catalogue of mwccarm codegen
+    quirks and the specific C phrasing that reproduces each one - a human already
+    did the "why does this weird instruction sequence appear" work and wrote it
+    down. This searches that prose directly instead of re-deriving it from raw
+    source/asm.
+    """
+    if not extern_dir.exists():
+        print(f"{extern_dir} does not exist.")
+        return
+
+    doc_exts = {".md", ".txt", ".rst"}
+    skip_dirs = {".git", "node_modules", "build"}
+    q = query.lower()
+    hits = 0
+
+    for path in sorted(extern_dir.rglob("*")):
+        if any(part in skip_dirs for part in path.parts):
+            continue
+        if not (path.is_file() and path.suffix.lower() in doc_exts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            if q in line.lower():
+                hits += 1
+                rel = path.relative_to(extern_dir)
+                repo = rel.parts[0] if len(rel.parts) > 1 else "extern"
+                lo = max(0, i - context)
+                hi = min(len(lines), i + context + 1)
+                print(f"\n[{repo}] {rel}:{i + 1}")
+                for j in range(lo, hi):
+                    marker = ">>" if j == i else "  "
+                    print(f"   {marker} {lines[j]}")
+
+    print(f"\n{'=' * 80}\n{hits} matching line(s) for '{query}' across markdown/doc files in {extern_dir}")
+    if hits == 0:
+        print("(Run 'python tools/manage_extern.py clone all' first if repos aren't checked out yet.)")
 
 
 def run_info(index_path: pathlib.Path):
@@ -374,6 +442,16 @@ def main():
     p_info = subparsers.add_parser("info", help="Display pattern index stats")
     p_info.add_argument("--index", type=pathlib.Path, default=DEFAULT_INDEX_PATH, help="Index path")
 
+    # notes
+    p_notes = subparsers.add_parser(
+        "notes",
+        help="Full-text search extern repos' own markdown/codegen-lever docs (highest-signal: "
+             "other decomp projects' hand-written notes on exactly this toolchain's quirks)",
+    )
+    p_notes.add_argument("query", help="Substring to search for (case-insensitive)")
+    p_notes.add_argument("--extern-dir", type=pathlib.Path, default=REPO_ROOT / "extern", help="extern/ dir")
+    p_notes.add_argument("--context", type=int, default=2, help="Lines of context around each hit")
+
     args = parser.parse_args()
 
     if args.subcommand == "scrape":
@@ -384,6 +462,8 @@ def main():
         run_cross_match(args.index, args.funcs_file)
     elif args.subcommand == "info":
         run_info(args.index)
+    elif args.subcommand == "notes":
+        run_notes(args.extern_dir, args.query, args.context)
     else:
         parser.print_help()
 

@@ -13,27 +13,32 @@
 	url = https://github.com/pret/pokediamond.git
 	update = none
 
-[submodule "extern/mariokartds"]
-	path = extern/mariokartds
-	url = https://github.com/Mariokartds-decomp/mariokartds.git
+[submodule "extern/pokeplatinum"]
+	path = extern/pokeplatinum
+	url = https://github.com/pret/pokeplatinum.git
 	update = none
 
-[submodule "extern/nsmb-decomp"]
-	path = extern/nsmb-decomp
-	url = https://github.com/nsmb-decomp/nsmb-decomp.git
+[submodule "extern/pmd-sky"]
+	path = extern/pmd-sky
+	url = https://github.com/pret/pmd-sky.git
 	update = none
 
-[submodule "extern/zelda-ph-decomp"]
-	path = extern/zelda-ph-decomp
-	url = https://github.com/zelda-ph-decomp/zelda-ph-decomp.git
+[submodule "extern/twewy"]
+	path = extern/twewy
+	url = https://github.com/Yotona/twewy.git
 	update = none
 
-[submodule "extern/mph-decomp"]
-	path = extern/mph-decomp
-	url = https://github.com/metroid-prime-hunters/mph-decomp.git
+[submodule "extern/fe11-us"]
+	path = extern/fe11-us
+	url = https://github.com/Eebit/fe11-us.git
 	update = none
 
-[submodule "extern/acww-decomp"]
-	path = extern/acww-decomp
-	url = https://github.com/acww-decomp/acww-decomp.git
+[submodule "extern/atc"]
+	path = extern/atc
+	url = https://github.com/sasja-san/atc.git
+	update = none
+
+[submodule "extern/khdays-decomp"]
+	path = extern/khdays-decomp
+	url = https://github.com/Yokimitsuro/khdays-decomp.git
 	update = none
