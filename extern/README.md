@@ -28,14 +28,31 @@ python tools/manage_extern.py deinit sm64ds-decomp
 
 ## Registered NDS Decomp Repositories
 
-- `sm64ds-decomp`: *Super Mario 64 DS* (`https://github.com/n64decomp/sm64ds`)
+Every URL below was verified to actually exist (`gh api repos/<owner>/<repo>`) before being
+registered - a prior version of this file listed several plausible-sounding but nonexistent
+repos (`Mariokartds-decomp/mariokartds`, `nsmb-decomp/nsmb-decomp`, `zelda-ph-decomp/zelda-ph-decomp`,
+`metroid-prime-hunters/mph-decomp`, `acww-decomp/acww-decomp` - all 404). If you add a new entry,
+verify it the same way first.
+
+- `sm64ds-decomp`: *Super Mario 64 DS* (`https://github.com/tangosdev/sm64ds-decomp`) - same
+  mwccarm/CodeWarrior ARM toolchain family as this project; largest, most mature codegen-lever
+  catalogue of any project on this list (`notes/mwccarm-codegen.md`).
 - `pokeheartgold`: *Pokémon HeartGold / SoulSilver* (`https://github.com/pret/pokeheartgold`)
 - `pokediamond`: *Pokémon Diamond / Pearl* (`https://github.com/pret/pokediamond`)
-- `mariokartds`: *Mario Kart DS* (`https://github.com/Mariokartds-decomp/mariokartds`)
-- `nsmb-decomp`: *New Super Mario Bros.* (`https://github.com/nsmb-decomp/nsmb-decomp`)
-- `zelda-ph-decomp`: *The Legend of Zelda: Phantom Hourglass* (`https://github.com/zelda-ph-decomp/zelda-ph-decomp`)
-- `mph-decomp`: *Metroid Prime Hunters* (`https://github.com/metroid-prime-hunters/mph-decomp`)
-- `acww-decomp`: *Animal Crossing: Wild World* (`https://github.com/acww-decomp/acww-decomp`)
+- `pokeplatinum`: *Pokémon Platinum* (`https://github.com/pret/pokeplatinum`) - rich `// ... to
+  match` idiom comments throughout matched source.
+- `pmd-sky`: *Pokémon Mystery Dungeon: Explorers of Sky* (`https://github.com/pret/pmd-sky`)
+- `twewy`: *The World Ends With You* (`https://github.com/Yotona/twewy`) - real ARM/NDS mwccarm
+  decomp; source of the volatile-parameter arg-spill lever used on this project's
+  `FUN_022d5a64`.
+- `fe11-us`: *Fire Emblem: New Mystery of the Emblem (US)* (`https://github.com/Eebit/fe11-us`)
+- `atc`: *Air Traffic Chaos* (`https://github.com/sasja-san/atc`)
+- `khdays-decomp`: *Kingdom Hearts 358/2 Days* (`https://github.com/Yokimitsuro/khdays-decomp`)
+- `dqiv-decomp`: *Dragon Quest IV* (`https://github.com/GoldieLeGenie/DQIV-DECOMP`) - uses `dsd`
+  (the same delink/relocate build tooling as this project).
+- `st`: *The Legend of Zelda: Spirit Tracks* (`https://github.com/zeldaret/st`)
+- `pokeblack`: *Pokémon Black* (`https://github.com/pokemodding/pokeblack`)
+- `pokeranger2`: *Pokémon Ranger: Shadows of Almia* (`https://github.com/Kuruyia/pokeranger2`)
 
 ---
 

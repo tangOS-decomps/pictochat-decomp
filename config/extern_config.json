@@ -69,6 +69,26 @@
     "interrupt_control": {
       "description": "CPSIE / CPSID / OS_DisableInterrupts patterns",
       "regex": "\\bcpsie\\b|\\bcpsid\\b|OS_DisableInterrupts|OS_EnableInterrupts"
+    },
+    "shift_truncation_idiom": {
+      "description": "mwccarm narrowing-cast idiom: lsl #0x10 immediately followed by lsr/asr #0x10 (or similar shift-pair) around an otherwise-plain bitwise op - the 'spurious lsl/lsr truncation triple' pattern this project's own notes/mwccarm-codegen.md section 1a documents (u16-typed local forces this over a single instruction)",
+      "regex": "lsl\\s+\\w+,\\s*\\w+,\\s*#0x10[\\s\\S]{0,40}(lsr|asr)\\s+\\w+,\\s*\\w+,\\s*#0x10"
+    },
+    "conditional_select_pair": {
+      "description": "movne/moveq (or streq/strne, ldreq/ldrne) predicated-pair register-select idiom - what a ternary (cond ? a : b) compiles to on this toolchain, vs. the 'override statement' shape a plain if/else with a default produces",
+      "regex": "\\b(mov|str|ldr)(ne|eq)\\b[\\s\\S]{0,40}\\b(mov|str|ldr)(ne|eq)\\b"
+    },
+    "regalloc_quirk_comment": {
+      "description": "Hand-written developer comments in matched C source explaining WHY the code is shaped a specific (often unnatural-looking) way for the compiler's benefit - highest-signal source for 'what C produces this odd asm' since another human already worked it out and wrote it down",
+      "regex": "//[^\\n]*(regalloc|reg alloc|register alloc|coloring|colour|spill|codegen|to match|matches rom|compiler quirk|workaround|needed for|forces? the compiler|mwcc|mwccarm)"
+    },
+    "volatile_codegen_use": {
+      "description": "volatile used on a LOCAL or PARAMETER (not a real hardware register) - almost always a codegen-steering trick rather than genuine hardware volatility; this project's own FUN_022d5a64 fix (volatile void *ctx parameter) came from exactly this pattern in twewy's OamMgr.c",
+      "regex": "\\bvolatile\\b(?!.*REG_)"
+    },
+    "pragma_opt_toggle": {
+      "description": "#pragma opt_* / peephole / scheduling toggles - direct evidence of someone fighting the optimizer on this exact toolchain",
+      "regex": "#pragma\\s+(opt_\\w+|peephole|scheduling)\\s+(on|off)"
     }
   },
   "search_directories": [
