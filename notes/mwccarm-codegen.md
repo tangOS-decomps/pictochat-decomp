@@ -538,7 +538,7 @@ correspond to slots target doesn't have, by comparing stack offset usage
 instruction-by-instruction (not yet done this round - ran out of time on the`volatile`
 sweep axis before starting the stack-offset audit).
 
-### Round 4, same session: found a real-world precedent via actual ARM/NDS mwccarm source, closed to 2 bytes
+### Round 4, same session: found a real-world precedent via actual ARM/NDS mwccarm source, closed to 4 bytes
 
 Per direct instruction to research rather than guess: searched beyond sm64ds-decomp and
 pret (both GameCube/PS2-adjacent or, for pret, not yet at this level of `volatile`
@@ -561,7 +561,7 @@ inferred abstractly.
 argument) on top of the existing `cur == chunk` + `volatile consumed` base **closed the
 prologue AND epilogue to an exact match** - `pop {r4,r5,r6,r7,r8,sb,sl,fp,lr}` is now
 byte-identical to target, zero duplicates, for the first time. Total size **0x1f8 vs
-target's 0x1fc - 2 bytes**, the closest this function has ever been by a wide margin.
+target's 0x1fc - 4 bytes**, the closest this function has ever been by a wide margin.
 
 Swept every other single parameter as the volatile target (`index`, `a1`, `chunk`,
 `len`) both alone and stacked on top of the working `ctx` version - `ctx` alone is
@@ -575,14 +575,14 @@ because it stops reusing the ORIGINAL incoming register's own stack-spilled addr
 **Current best: `scratch/FUN_022d5a64_BEST_dsi13.c`** (`cur == chunk` implicit test +
 `volatile unsigned int consumed` + `volatile void *ctx` parameter, `dsi/1.3`,
 `-O4,s`) - exact register set, exact push AND pop instructions, frame `0x14` vs
-target's `0xc` (2 stack words), **2 bytes total**. Remaining diff (`fdiff --align`,
+target's `0xc` (1 stack word), **4 bytes total**. Remaining diff (`fdiff --align`,
 26 blocks) is now overwhelmingly plain register coloring (`sb`/`sl`, `r4`/`r5`/`r6`
 swaps) plus the same `moveq`/`movne` polarity flip on the `v30`/`v32` swap-pick logic
 noted in round 1 - re-derived the source logic against the original Ghidra pseudocode
 and confirmed the C is correct (`pkt[0x21] = flag ? v30 : v32`, matches exactly);
 the polarity flip is downstream coloring from an equivalent computation, not a bug.
 Tried `volatile` on `v30`/`v32` directly and on `pktSrc`+`afterHdr` together - neither
-closes the last 2 bytes; next angle is the coloring residuals directly (declaration-
+closes the last 4 bytes; next angle is the coloring residuals directly (declaration-
 order or access-expression levers per section 1, not yet re-swept against this exact
 2-byte-away candidate).
 
@@ -611,7 +611,7 @@ write, not a scalar local - the override lever's own precondition (a variable th
 gets used again after selection) doesn't hold here. Round 4's diagnosis was right
 that this specific residual is pure coloring, not a structural gap; confirmed by
 this round's regression rather than assumed. Reverted these changes - current best
-remains `scratch/FUN_022d5a64_BEST_dsi13.c` at 0x1f8 (2 bytes over 0x1fc), exact
+remains `scratch/FUN_022d5a64_BEST_dsi13.c` at 0x1f8 (4 bytes over 0x1fc), exact
 register set, both blocks flagged in earlier rounds now individually verified
 correct-shape-modulo-coloring rather than open questions.
 
