@@ -95,6 +95,26 @@ sm64ds levers were tried against this specific residual and had **zero effect** 
   the result slightly *worse*, not better; no real evidence supports this signature
   change beyond the (unconfirmed) hypothesis.
 
+**Round 10** (testing whether this session's two `FUN_022d5a64` levers - volatile-on-
+parameter, u64-laundering the SPECIFIC mis-colored variable rather than its derivatives
+- generalize here; they don't):
+- `volatile unsigned short a0` (the twewy-sourced parameter lever that closed
+  `FUN_022d5a64`'s prologue/epilogue gap): regresses to 0x1fc (16 bytes over, vs v13's
+  4). `a0` here is used exactly once, right at function top - nothing like `FUN_022d5a64`'s
+  `ctx` (carried live across the whole function). The lever's mechanism (keeping a
+  stack-resident parameter materialized) has no purchase on a parameter that's already
+  dead after its first use. (mwccarm syntax note: `volatile` must precede the type in a
+  parameter decl - `unsigned short volatile a0` produces cascading unrelated-looking
+  "expression syntax error"s deep in the function body, a confusing failure mode.)
+- `char * volatile conn` (the lever applied directly to the mis-colored variable):
+  regresses further, 0x210 (36 bytes over) - forcing every use to reload from memory
+  is the opposite of what's needed (target keeps `conn` resident in one register the
+  whole function).
+- Re-ran u64-laundering on `conn` itself specifically (this section's existing bullet
+  says "5 candidate base pointers" were tried previously, but doesn't name `conn`
+  explicitly among them) - reconfirms the same zero-effect result: still 0x1f0,
+  `conn` still colors to `r4` per `fdiff.py --align`.
+
 **Where this leaves it**: `scratch/FUN_022d5870_v13.c` is the closest candidate found
 (123/123 instructions, one pure register permutation remaining). Not banked - still
 not byte-identical, and per this project's own standard that's not a match. Next
@@ -538,7 +558,7 @@ correspond to slots target doesn't have, by comparing stack offset usage
 instruction-by-instruction (not yet done this round - ran out of time on the`volatile`
 sweep axis before starting the stack-offset audit).
 
-### Round 4, same session: found a real-world precedent via actual ARM/NDS mwccarm source, closed to 2 bytes
+### Round 4, same session: found a real-world precedent via actual ARM/NDS mwccarm source, closed to 4 bytes
 
 Per direct instruction to research rather than guess: searched beyond sm64ds-decomp and
 pret (both GameCube/PS2-adjacent or, for pret, not yet at this level of `volatile`
@@ -561,7 +581,7 @@ inferred abstractly.
 argument) on top of the existing `cur == chunk` + `volatile consumed` base **closed the
 prologue AND epilogue to an exact match** - `pop {r4,r5,r6,r7,r8,sb,sl,fp,lr}` is now
 byte-identical to target, zero duplicates, for the first time. Total size **0x1f8 vs
-target's 0x1fc - 2 bytes**, the closest this function has ever been by a wide margin.
+target's 0x1fc - 4 bytes**, the closest this function has ever been by a wide margin.
 
 Swept every other single parameter as the volatile target (`index`, `a1`, `chunk`,
 `len`) both alone and stacked on top of the working `ctx` version - `ctx` alone is
@@ -575,16 +595,90 @@ because it stops reusing the ORIGINAL incoming register's own stack-spilled addr
 **Current best: `scratch/FUN_022d5a64_BEST_dsi13.c`** (`cur == chunk` implicit test +
 `volatile unsigned int consumed` + `volatile void *ctx` parameter, `dsi/1.3`,
 `-O4,s`) - exact register set, exact push AND pop instructions, frame `0x14` vs
-target's `0xc` (2 stack words), **2 bytes total**. Remaining diff (`fdiff --align`,
+target's `0xc` (1 stack word), **4 bytes total**. Remaining diff (`fdiff --align`,
 26 blocks) is now overwhelmingly plain register coloring (`sb`/`sl`, `r4`/`r5`/`r6`
 swaps) plus the same `moveq`/`movne` polarity flip on the `v30`/`v32` swap-pick logic
 noted in round 1 - re-derived the source logic against the original Ghidra pseudocode
 and confirmed the C is correct (`pkt[0x21] = flag ? v30 : v32`, matches exactly);
 the polarity flip is downstream coloring from an equivalent computation, not a bug.
 Tried `volatile` on `v30`/`v32` directly and on `pktSrc`+`afterHdr` together - neither
-closes the last 2 bytes; next angle is the coloring residuals directly (declaration-
+closes the last 4 bytes; next angle is the coloring residuals directly (declaration-
 order or access-expression levers per section 1, not yet re-swept against this exact
 2-byte-away candidate).
+
+### Round 5, same session: full grid search on `first`, confirmed the `v30`/`v32` block was already correct
+
+Ran the complete 2x2x2 grid (`first` present-as-volatile / present-as-plain / absent,
+crossed with `consumed` volatile on/off and `ctx` volatile on/off - 8 combinations) to
+settle whether reintroducing the literal `first` flag (which round 3 showed target
+genuinely has, as a one-time pre-loop write) could be combined with the round-4 `ctx`
+fix. It cannot: every combination that includes `first` as a real variable is either
+worse (0x204+) or, at best, ties the no-`first` form (0x1f8) while losing the clean
+push (reverts to a duplicate). The implicit `cur == chunk` form remains strictly
+best despite not matching target's literal one-time-write shape in that one block -
+a real, confirmed tradeoff, not an oversight.
+
+Also went back to the `v30`/`v32` swap-pick block (the `moveq`/`movne` polarity flip
+flagged as "probably just coloring" in round 4) with fresh attempts: rewrote it as
+default-then-override statements (the documented ternary-vs-override lever) and as
+two fully independent `if`/`else` blocks. **Both made the total size WORSE (0x1f4,
+8 bytes under, vs the ternary form's 0x1f8, 4 bytes over)** - checking the disassembly
+confirmed why: the EXISTING ternary form already compiles to the exact `movne r1,r2;
+moveq r1,r3; strh r1,[r0,#0x40]` shape target has (single store, predicated register
+select) - the override-statement rewrites instead produced predicated CONDITIONAL
+STORES (`strhne`/`strheq`, two stores) because the destination is a direct memory
+write, not a scalar local - the override lever's own precondition (a variable that
+gets used again after selection) doesn't hold here. Round 4's diagnosis was right
+that this specific residual is pure coloring, not a structural gap; confirmed by
+this round's regression rather than assumed. Reverted these changes - current best
+remains `scratch/FUN_022d5a64_BEST_dsi13.c` at 0x1f8 (4 bytes over 0x1fc), exact
+register set, both blocks flagged in earlier rounds now individually verified
+correct-shape-modulo-coloring rather than open questions.
+
+### Round 6, same session: two hypotheses disproven directly, one real structural fix (exact total SIZE match, still not byte-identical)
+
+**C++ member-function hypothesis, disproven.** Tested whether `FUN_022d5a64` is
+actually a non-static C++ member function (`ConnMgrClass::FUN_022d5a64`, real
+mangled symbol `_ZN12ConnMgrClass12FUN_022d5a64EjjPtjPv`, genuine implicit `this`
+instead of the free-function `G_023190dc` global lookup) - compiled both forms
+side by side at every opt level tried: byte-identical output. Member-function ABI
+is not the missing piece; the free-function form is exactly as good.
+
+**Full loop-body duplication, disproven.** The `first`-flag's role (round 3) is to
+pick between reading the header from `&a1` on iteration 1 vs from `cur` on later
+iterations. Tried the maximally literal reading of "target may not use a flag at
+all, just duplicated code" by peeling iteration 1 out as fully separate source (own
+`notify1` label, no shared boolean, `scratch/FUN_022d5a64_v19_fullpeel.c`): compiles
+to **0x354, roughly 2x target's 0x1fc**. The compiler does not merge the duplicated
+logic back down - proves target's real source shares the loop body via some flag
+mechanism (the `cur == chunk` implicit test already in use), not literal duplication.
+
+**subIndex shift-form fix - first-ever exact TOTAL SIZE match.** While auditing the
+4-byte gap (a real arithmetic correction this round: earlier text in this file said
+"2 bytes over" in several places - 0x1fc - 0x1f8 is actually 4 bytes / 1 whole
+instruction, not 2 - fixed throughout), re-examined every remaining diff block for
+an idiom-shaped residual rather than assuming it was pure coloring. Found one:
+`subIndex = (hdr & 0xf00) >> 8;` (a direct arithmetic right-shift) was written where
+target's real source apparently uses the shift-left-then-shift-right pair form -
+`subIndex = ((hdr & 0xf00) << 8) >> 16;` - mathematically identical, but selects a
+different instruction sequence (this is the exact same "shift-form idiom" class first
+noticed on `FUN_022d5870`'s mask computation: an `asr`/direct-shift single instruction
+vs an `lsl`+`lsr` pair). Applying the shift-left/shift-right pair form here **closed
+the gap to exact total size, 0x1fc == target's 0x1fc**, for the first time this
+function has ever hit its target size.
+
+**Not byte-identical even at exact size**: `tools/match.py` still reports
+`MATCHING VERSIONS: none`. Internally, the candidate decodes to 126 real instructions
+vs target's 127 - a genuine 1-instruction content gap (not literal-pool padding),
+concentrated in the first-loop-iteration entry block per a stack-offset audit (this
+candidate uses 5 distinct stack slots - `[sp+0]`,`[sp+4]`,`[sp+8]`,`[sp+0xc]`,`[sp+0x10]`
+- vs target's 3 - `[sp+0]`,`[sp+4]`,`[sp+8]`). Extended the round-5 grid search (more
+`first`-reintroduction combinations, layered on top of the shift-form fix; forced early
+`ctx` materialization via self-assignment; redundant-recompute splitting of the
+`cur == chunk` test itself) - no combination improved past this point. **Current best
+remains `scratch/FUN_022d5a64_BEST_dsi13.c`**, now updated with the shift-form fix:
+exact register set, exact push/pop, exact total size (0x1fc), a real 1-instruction
+content gap concentrated in the iteration-1 entry path, still not byte-identical.
 
 ## 4. Where to look next
 
