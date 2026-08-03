@@ -495,6 +495,49 @@ negative result, not an unexplored gap. Remaining budget is probably better spen
 triaging the other ~25 diff blocks (mostly plain register coloring, not yet
 individually characterized this round) than continuing to force this one ip-spill.
 
+### Round 3, same session: EXACT register-set match found (0x200 vs target's 0x1fc, 4 bytes)
+
+Pushed further after PR #35 (this file + the viewer + the `2004/b56` sweep addition)
+was committed and merged into its own branch. Two more real findings:
+
+1. **`volatile` on `first` reproduces target's real flag structure AND is closer than
+   the `cur == chunk` implicit-test workaround.** Re-reading target's actual bytes for
+   this block confirmed it genuinely has an explicit flag - `cmp r0,#1` against a value
+   loaded from a **stack slot** (`ldr r0,[sp,#8]`), with `streq r0,[sp,#8]` clearing it
+   back to 0 on the first pass - not an implicit pointer comparison. Declaring `first`
+   `volatile int` (forcing it to always be memory-resident, never register-allocated)
+   reproduces this stack-resident structure almost exactly (same shape, offset differs)
+   while STILL avoiding the register-count blowup a plain `int first` caused - `volatile`
+   was the missing piece connecting the two working-but-incompatible approaches from
+   round 2. Result: 0x200 (down from 0x1fc target - so this is not yet the final answer
+   on its own, see #2).
+
+2. **`volatile unsigned int consumed` (on top of the `cur == chunk` form, not the
+   `volatile first` form) gives an EXACT 13/13 register-set match** -
+   `{r0,r1,r2,r3,r4,r5,r6,r7,r8,sb,sl,fp,lr}`, byte-identical push list to target, for
+   the first time in this function's entire multi-round history. Found via a full
+   single-variable `volatile` sweep (tried on `val`, `hdr`, `chunkLen`, `consumed`,
+   `subIndex`, `maskOff` individually) - `consumed` and `subIndex` both give a clean
+   push in isolation, but `consumed` gives the smaller total size (0x200 vs
+   `subIndex`'s 0x1fc... - **note: `volatile subIndex` alone lands on the exact SAME
+   TOTAL SIZE as target, 0x1fc, but with a still-duplicated push and a different
+   internal shape - a size coincidence, not structural correctness; don't mistake
+   matching total size for matching structure, always check the push set too.**
+
+**Current best: `scratch/FUN_022d5a64_BEST_dsi13.c`** (`cur == chunk` implicit test +
+`volatile unsigned int consumed`, `dsi/1.3`, `-O4,s`) - **exact register SET match**
+(not just count), frame `0x14` vs target's `0xc` (8 bytes / 2 stack words over), total
+size **0x200 vs target's 0x1fc - only 4 bytes over**. This is unambiguously the
+closest this function has been. Tried and ruled out for shrinking the remaining 2
+stack words: `volatile` on `chunkLen`/`subIndex`/`maskOff`/`p`/`pktSrc`/`afterHdr`
+individually and in combination with the working `consumed` version - every
+additional `volatile` either regresses the register count (loses the clean push) or
+doesn't shrink the frame at all. The 2 extra stack words are still unaccounted for -
+next step is identifying exactly which 2 of the ~13 remaining stack-resident locals
+correspond to slots target doesn't have, by comparing stack offset usage
+instruction-by-instruction (not yet done this round - ran out of time on the`volatile`
+sweep axis before starting the stack-offset audit).
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
