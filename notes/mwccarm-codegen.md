@@ -586,6 +586,35 @@ closes the last 2 bytes; next angle is the coloring residuals directly (declarat
 order or access-expression levers per section 1, not yet re-swept against this exact
 2-byte-away candidate).
 
+### Round 5, same session: full grid search on `first`, confirmed the `v30`/`v32` block was already correct
+
+Ran the complete 2x2x2 grid (`first` present-as-volatile / present-as-plain / absent,
+crossed with `consumed` volatile on/off and `ctx` volatile on/off - 8 combinations) to
+settle whether reintroducing the literal `first` flag (which round 3 showed target
+genuinely has, as a one-time pre-loop write) could be combined with the round-4 `ctx`
+fix. It cannot: every combination that includes `first` as a real variable is either
+worse (0x204+) or, at best, ties the no-`first` form (0x1f8) while losing the clean
+push (reverts to a duplicate). The implicit `cur == chunk` form remains strictly
+best despite not matching target's literal one-time-write shape in that one block -
+a real, confirmed tradeoff, not an oversight.
+
+Also went back to the `v30`/`v32` swap-pick block (the `moveq`/`movne` polarity flip
+flagged as "probably just coloring" in round 4) with fresh attempts: rewrote it as
+default-then-override statements (the documented ternary-vs-override lever) and as
+two fully independent `if`/`else` blocks. **Both made the total size WORSE (0x1f4,
+8 bytes under, vs the ternary form's 0x1f8, 4 bytes over)** - checking the disassembly
+confirmed why: the EXISTING ternary form already compiles to the exact `movne r1,r2;
+moveq r1,r3; strh r1,[r0,#0x40]` shape target has (single store, predicated register
+select) - the override-statement rewrites instead produced predicated CONDITIONAL
+STORES (`strhne`/`strheq`, two stores) because the destination is a direct memory
+write, not a scalar local - the override lever's own precondition (a variable that
+gets used again after selection) doesn't hold here. Round 4's diagnosis was right
+that this specific residual is pure coloring, not a structural gap; confirmed by
+this round's regression rather than assumed. Reverted these changes - current best
+remains `scratch/FUN_022d5a64_BEST_dsi13.c` at 0x1f8 (2 bytes over 0x1fc), exact
+register set, both blocks flagged in earlier rounds now individually verified
+correct-shape-modulo-coloring rather than open questions.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
