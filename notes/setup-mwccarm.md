@@ -68,10 +68,29 @@ defeat the reduction. **A single function appearing to prefer the other family
 is not evidence of a mixed toolchain - check whether an optimisation pragma
 explains it first.**
 
-All ten `2.0/*` builds behave identically on every discriminating function, so
-the *family* is pinned but the point release is not; `2.0/base` is the
-representative. (`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP`
-entirely until 2026-08-04 and had never been tested - they are included now.)
+### Narrowing: `2.0/base` is ruled out too, the pin is `2.0/sp1` or later
+
+Verifying **all 189** banked matches against every `2.0/*` build narrows it
+further. Five functions (`MultiStore_Int`, three `CP15` cache primitives, and
+`FUN_023320f0`) match every `2.0/*` build **except `2.0/base`**, which emits
+genuinely different code for them - `FUN_023320f0` compiles to 0x10 bytes
+under `base` against the target's 0xc, a real codegen difference, not an asm
+or size artifact.
+
+The intersection that satisfies all 189 verified matches is therefore:
+
+    2.0/sp1, 2.0/sp1p2, 2.0/sp1p5, 2.0/sp1p6, 2.0/sp1p7,
+    2.0/sp2, 2.0/sp2p2, 2.0/sp2p3, 2.0/sp2p4
+
+Those nine are indistinguishable from each other across the entire corpus, so
+the family *and* the "sp1 or later" floor are pinned but the exact point
+release is not. `CANONICAL` is **`2.0/sp1`**, the earliest build consistent
+with every byte of evidence. If you ever find a function that discriminates
+among those nine, narrow it further and update this section.
+
+(`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP` entirely until
+2026-08-04 and had never been tested by any sweep in this project's history.
+They are included now - and they turned out to be in the answer set.)
 
 ### The older `1.2/*` line
 
@@ -119,6 +138,60 @@ DSi-relevant than what's already vendored either. **Conclusion: for anyone
 chasing a hard residual and wondering "is this actually a different,
 unvendored compiler build" - it almost certainly is not.** The full known
 universe of DSi-era CodeWarrior builds is already in `tools/mwccarm/`.
+
+## Provisioning the PR-validator build box
+
+The validator (`.github/workflows/pr-validate.yml` -> a private relay -> a build
+box that clones the repo and runs `tools/pr_linkcheck.py`) compiles every
+changed `src/arm{7,9}/*.c|*.cpp` and byte-compares it. The compilers are
+gitignored, so **the box needs its own copy of the pinned toolchain** - the
+repo cannot ship it.
+
+This bites when the pin changes. Moving the pin from `dsi/*` to `2.0/*` left
+the box provisioned with only the `dsi/*` set, and because `match.py`'s
+`compile_c()` returns `None` both for "not installed" and "your C is broken",
+every PR touching a src file was told its source *failed to compile*.
+
+**Check the box first - this is a one-liner, and it compiles a probe rather
+than just looking for files:**
+
+```
+python tools/check_toolchain.py          # exit 0 = can validate; --json for CI
+```
+
+It reports, per pinned build, whether `mwccarm.exe` is present, whether its
+support files are present, and whether a probe actually compiles; plus
+`license.dat`, and (off Windows) whether `MWCCARM_LAUNCHER` is set and `wine`
+is on PATH.
+
+**To provision:**
+
+1. Copy the pinned build directories into `tools/mwccarm/` on the box, keeping
+   the same layout as a dev machine:
+
+   ```
+   tools/mwccarm/2.0/sp1/     <- CANONICAL; the minimum needed to validate
+   tools/mwccarm/2.0/sp1p2/   ... and the rest of match.py's PINNED list
+   tools/mwccarm/license.dat  <- shared, one level up, not per-version
+   ```
+
+   Each version directory needs `mwccarm.exe` **plus** `ELFIO.dll`,
+   `MSL_All-DLL80_x86.dll`, `lmgr8c.dll`, `mwasmarm.exe` and `mwldarm.exe`.
+   `mwccarm.exe` alone fails at runtime with a DLL error that looks nothing
+   like "not installed". ~3.6 MB per version, ~36 MB for the whole `2.0` tree.
+
+2. Non-Windows box: install Wine and set `MWCCARM_LAUNCHER=wine` in the
+   validator's environment (`compile_c()` reads it and prefixes the command).
+
+3. Re-run `python tools/check_toolchain.py` and expect exit 0.
+
+**Minimum vs complete.** Only `2.0/sp1` (the `CANONICAL`) is strictly required
+- `pr_linkcheck.py` sweeps `PINNED` and accepts a match from any installed
+build, and all nine pinned builds are byte-equivalent across the entire banked
+corpus. Installing all nine is still preferable so a local `--trio` sweep and
+CI agree exactly. **Do not provision `2.0/base` alone**: it is deliberately
+excluded from `PINNED` because five banked functions match every other `2.0/*`
+build and not it, so a box holding only `base` would reach wrong verdicts.
 
 ## If you need to re-set-up on a fresh machine
 

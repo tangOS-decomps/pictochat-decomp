@@ -71,7 +71,14 @@ NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4"] + CW20_SW
 # line cannot from any source phrasing.
 CW2004_SWEEP = ["2004/b56"]
 SWEEP = DSI_SWEEP + NTR_SWEEP + CW2004_SWEEP
-PINNED = CW20_SWEEP
+# The nine builds that satisfy ALL banked matches. 2.0/base is deliberately NOT
+# here: it is in CW20_SWEEP (so --all still reports it) but it is ruled out as
+# this ROM's compiler - five functions match every other 2.0/* build and not it.
+# PINNED is what --trio and tools/pr_linkcheck.py sweep, so keeping a
+# known-wrong build out of it stops a validator box that happens to have only
+# 2.0/base installed from reaching a wrong verdict.
+CW20_PINNED = [v for v in CW20_SWEEP if v != "2.0/base"]
+PINNED = CW20_PINNED
 
 # ---------------------------------------------------------------------------
 # THE TOOLCHAIN IS 2.0/*, NOT dsi/*  (settled 2026-08-04 - do not re-litigate
@@ -93,11 +100,19 @@ PINNED = CW20_SWEEP
 #                    once `#pragma opt_strength_reduction off` stops 2.0 from
 #                    turning its loop index into a pointer induction variable
 # So 2.0/* explains all four; dsi/* explains one and is structurally incapable
-# of three. All ten 2.0/* builds behave identically on every discriminating
-# function, so the family is pinned but the point release is not - 2.0/base is
-# chosen as the representative.
+# of three.
+#
+# NARROWED (2026-08-04, second pass): 2.0/base is ALSO ruled out. Verifying all
+# 189 banked matches against every 2.0/* build, five of them (MultiStore_Int,
+# three CP15 cache primitives, FUN_023320f0) match every build EXCEPT 2.0/base,
+# which emits genuinely different code for them (e.g. FUN_023320f0 is 0x10
+# bytes under base vs the target's 0xc). The intersection that satisfies ALL
+# 189 is 2.0/sp1 and later - nine builds, indistinguishable from each other on
+# the whole corpus. So the family AND the "sp1 or later" floor are pinned; the
+# exact point release is not. 2.0/sp1 is the earliest build consistent with
+# every byte of evidence and is therefore the representative.
 # ---------------------------------------------------------------------------
-CANONICAL = "2.0/base"
+CANONICAL = "2.0/sp1"
 
 md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
 
