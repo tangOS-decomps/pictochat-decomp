@@ -1149,6 +1149,55 @@ session, and now with the SAME residual-class confirmation across all three
 `prevIdx`/`firstKept`) under properly-configured tooling rather than a mix of
 valid and invalid measurements.
 
+**Round 3e - a genuinely new axis: sweeping `dsi/*` POINT RELEASES (not just the
+already-ruled-out `2.0/*` vs `dsi/*` FAMILY distinction) against this specific
+function - found a real, reproducible, function-specific 4-byte win.** This
+project vendors 9 distinct `dsi/*` builds (`1.1`, `1.1p1`, `1.2`, `1.2p1`,
+`1.2p2`, `1.3`, `1.3p1`, `1.6sp1`, `1.6sp2`) - every prior version-sensitivity
+check this session (the `2.0/*`-vs-`dsi/*` sanity check early on, `FUN_022d5870`'s
+own round-7 `--all` sweep) only ever tested `dsi/1.3` within this specific point
+range, treating the whole `dsi/*` line as interchangeable once the FAMILY was
+confirmed correct. It isn't, for every build: `dsi/1.1` alone compiles
+`FUN_022d5540_BEST.c` to 0x33c instead of every other version's 0x340 - a real,
+reproducible 4-byte/1-instruction improvement, with the exact register set and
+exact epilogue both still preserved. Sanity-checked this isn't a general
+"`dsi/1.1` is just better" effect: swept all 9 versions against both
+`FUN_022d5a64`'s `BEST_dsi13.c` and `FUN_022d5870`'s `v13.c` too - byte-identical
+across all 9 versions for both (confirming `FUN_022d5870`'s own earlier `--all`
+finding extends to the point-release granularity, not just the major-family
+one) - so this specific win is real but function-specific, not a blanket "switch
+the pinned version" fix.
+
+Re-ran the inline-variable sweep (`queueHeadBase`/`typeFlagBase`/`freelistBase`)
+and the `prevIdx`/`firstKept` type-sweep from rounds 3c/3d under `dsi/1.1`: the
+whole shape of both sweeps is IDENTICAL to the `dsi/1.3` results, just uniformly
+4 bytes better across every combination - including the `queueHeadBase`-inlined
+variant, which STILL costs the same extra register (`r3`) under `dsi/1.1` as it
+does under every other version (checked directly). So `dsi/1.1`'s win is a real,
+separate, additive fix for something else entirely in the function (traced to
+one specific block - the `entry[4] |= ...; entry[3] &= ~entry[4];` compound
+update, where target does a genuine redundant fresh reload of `entry[4]` after
+storing it and `dsi/1.3`'s candidate lets CSE cache the just-computed value
+instead) - it does not touch either of the two already-identified structural
+mechanisms, which persist unchanged under the new baseline. Tried forcing the
+redundant reload explicitly at that spot via a `volatile`-cast read
+(`*(volatile unsigned short *)&entry[4]`) to see if that lever, not the version
+switch, was the real fix - regressed `dsi/1.1` back to 0x340 (undoing its own
+natural win) while leaving `dsi/1.3` unchanged at 0x340, confirming `dsi/1.1`
+was already doing the right thing on its own and the volatile cast was a
+net-harmful, unnecessary intervention once the better version is used as the
+base.
+
+**New best**: `scratch/FUN_022d5540_BEST.c` compiled against **`dsi/1.1`**
+(not `1.3`) - 0x33c vs target's 0x328, 20 bytes over (down from 24), same exact
+register set and epilogue, with the two already-documented structural
+mechanisms as the sole remaining content. Worth remembering as a general lever
+for any future hard-residual work on this project: don't assume the pinned
+`dsi/1.3` is uniformly representative of the whole `dsi/*` line just because the
+`2.0/*` family was ruled out - sweep the individual point releases too, cheaply
+(9 versions x one `match.py` invocation each), before concluding a residual is
+version-independent.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
