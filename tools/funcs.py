@@ -71,3 +71,51 @@ def load_funcs():
 
 def target_bytes(f):
     return bytes.fromhex(f["bytes"])
+
+
+def true_size(f, all_funcs=None):
+    """Size of `f` INCLUDING its own trailing literal pool, in bytes.
+
+    Ghidra's cached `size` comes from code-flow analysis, not a symbol table
+    (this ROM has none), so it stops at the last reachable instruction and
+    EXCLUDES the pool words the compiler emits immediately after. mwccarm puts
+    those words inside the function it built them for, so a candidate compiled
+    from C is longer than the cached size and can never compare equal - the
+    mismatch looks like a codegen bug and is not one. This bit three of this
+    project's hardest functions for several sessions each
+    (notes/mwccarm-codegen.md 3m/3n) and affects ~40% of the corpus.
+
+    Rather than blindly extending to the next function's start (which
+    over-extends when unrelated data or an unlisted function sits in the gap -
+    FUN_02321d14's gap is 0xa0 bytes but only 4 of them are its pool), this
+    decodes `f` and extends only far enough to cover the highest pool word its
+    OWN pc-relative loads actually reference. If nothing is referenced past the
+    cached end, the cached size is returned unchanged.
+    """
+    size = f["size"]
+    data = bytes.fromhex(f["bytes"])
+    if len(data) < size:
+        return size
+    end = size
+    if f.get("mode") == "arm":
+        for off in range(0, size - 3, 4):
+            w = int.from_bytes(data[off:off + 4], "little")
+            # LDR rX,[pc,#imm12]: cond!=0xf, I=0 P=1 U=? B=0 W=0 L=1, Rn=pc
+            if (w & 0x0F7F0000) != 0x051F0000:
+                continue
+            imm = w & 0xFFF
+            if not (w & 0x00800000):          # U clear -> subtract
+                imm = -imm
+            pool = off + 8 + imm
+            if pool >= end:
+                end = pool + 4
+    else:
+        for off in range(0, size - 1, 2):
+            h = int.from_bytes(data[off:off + 2], "little")
+            # Thumb LDR (literal), encoding T1: 01001 Rd imm8
+            if (h & 0xF800) != 0x4800:
+                continue
+            pool = ((off + 4) & ~3) + (h & 0xFF) * 4
+            if pool >= end:
+                end = pool + 4
+    return end

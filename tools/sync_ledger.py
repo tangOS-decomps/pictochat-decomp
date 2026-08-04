@@ -36,15 +36,25 @@ import ledger as L   # noqa: E402
 
 
 def scan_markers():
-    """{(module, addr): (name, size_hint=None)} from every `// decomp:` marker
-    comment found in src/arm9 and src/arm7."""
+    """{(module, addr): name} from every `// decomp:` marker comment found in
+    src/arm9 and src/arm7, EXCLUDING files parked as `// NONMATCHING:`.
+
+    The NONMATCHING skip matters: those files are logic-correct decompilations
+    that are NOT byte-exact (tools/nonmatching.py parks them), so banking them
+    into matched.jsonl overstates the match count and makes the ledger claim
+    matches that `tools/match.py` will not reproduce. tools/progress.py already
+    counts them separately; this used to disagree with it, which is how four
+    parked functions ended up recorded as matched.
+    """
     out = {}
     for sub in ("arm9", "arm7"):
         d = SRC / sub
         if not d.is_dir():
             continue
         for p in list(d.glob("*.c")) + list(d.glob("*.cpp")):
-            head = p.read_text(encoding="utf-8", errors="ignore")[:400]
+            head = p.read_text(encoding="utf-8", errors="ignore")[:600]
+            if "// NONMATCHING:" in head:
+                continue
             m = L.MARKER_RE.search(head)
             if m:
                 module, addr, name = m.group(1), int(m.group(2), 16), m.group(3)
@@ -59,6 +69,10 @@ def find_src_by_name(f):
                  d / f"{f['name']}_{f['addr']:08x}.c",
                  d / f"{f['name']}_{f['addr']:08x}.cpp"):
         if cand.is_file():
+            # Same NONMATCHING skip as scan_markers() - a parked file must not
+            # be banked as a match via the filename fallback either.
+            if "// NONMATCHING:" in cand.read_text(encoding="utf-8", errors="ignore")[:600]:
+                return None
             return cand
     return None
 

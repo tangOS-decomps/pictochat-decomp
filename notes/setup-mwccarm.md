@@ -68,10 +68,29 @@ defeat the reduction. **A single function appearing to prefer the other family
 is not evidence of a mixed toolchain - check whether an optimisation pragma
 explains it first.**
 
-All ten `2.0/*` builds behave identically on every discriminating function, so
-the *family* is pinned but the point release is not; `2.0/base` is the
-representative. (`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP`
-entirely until 2026-08-04 and had never been tested - they are included now.)
+### Narrowing: `2.0/base` is ruled out too, the pin is `2.0/sp1` or later
+
+Verifying **all 189** banked matches against every `2.0/*` build narrows it
+further. Five functions (`MultiStore_Int`, three `CP15` cache primitives, and
+`FUN_023320f0`) match every `2.0/*` build **except `2.0/base`**, which emits
+genuinely different code for them - `FUN_023320f0` compiles to 0x10 bytes
+under `base` against the target's 0xc, a real codegen difference, not an asm
+or size artifact.
+
+The intersection that satisfies all 189 verified matches is therefore:
+
+    2.0/sp1, 2.0/sp1p2, 2.0/sp1p5, 2.0/sp1p6, 2.0/sp1p7,
+    2.0/sp2, 2.0/sp2p2, 2.0/sp2p3, 2.0/sp2p4
+
+Those nine are indistinguishable from each other across the entire corpus, so
+the family *and* the "sp1 or later" floor are pinned but the exact point
+release is not. `CANONICAL` is **`2.0/sp1`**, the earliest build consistent
+with every byte of evidence. If you ever find a function that discriminates
+among those nine, narrow it further and update this section.
+
+(`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP` entirely until
+2026-08-04 and had never been tested by any sweep in this project's history.
+They are included now - and they turned out to be in the answer set.)
 
 ### The older `1.2/*` line
 

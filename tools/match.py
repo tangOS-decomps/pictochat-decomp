@@ -93,11 +93,19 @@ PINNED = CW20_SWEEP
 #                    once `#pragma opt_strength_reduction off` stops 2.0 from
 #                    turning its loop index into a pointer induction variable
 # So 2.0/* explains all four; dsi/* explains one and is structurally incapable
-# of three. All ten 2.0/* builds behave identically on every discriminating
-# function, so the family is pinned but the point release is not - 2.0/base is
-# chosen as the representative.
+# of three.
+#
+# NARROWED (2026-08-04, second pass): 2.0/base is ALSO ruled out. Verifying all
+# 189 banked matches against every 2.0/* build, five of them (MultiStore_Int,
+# three CP15 cache primitives, FUN_023320f0) match every build EXCEPT 2.0/base,
+# which emits genuinely different code for them (e.g. FUN_023320f0 is 0x10
+# bytes under base vs the target's 0xc). The intersection that satisfies ALL
+# 189 is 2.0/sp1 and later - nine builds, indistinguishable from each other on
+# the whole corpus. So the family AND the "sp1 or later" floor are pinned; the
+# exact point release is not. 2.0/sp1 is the earliest build consistent with
+# every byte of evidence and is therefore the representative.
 # ---------------------------------------------------------------------------
-CANONICAL = "2.0/base"
+CANONICAL = "2.0/sp1"
 
 md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
 

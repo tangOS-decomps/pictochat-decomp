@@ -707,6 +707,23 @@ declared size against the NEXT function's start address before concluding
 anything about a residual**: `next_addr - this_addr` is the honest upper bound,
 and `tools/funcs.py` already has both.
 
+**`tools/funcs.py` now computes this for you: `funcs.true_size(f)`.** Added
+2026-08-04 after the truncation cost three hard functions several sessions
+each. It decodes `f` and extends the cached size only far enough to cover the
+highest pool word that `f`'s OWN pc-relative loads reference (ARM `ldr
+rX,[pc,#imm12]` and Thumb `LDR (literal)` both handled), returning the cached
+size unchanged when nothing is referenced past the end. It deliberately does
+NOT extend to the next function's start: that over-extends whenever unrelated
+data sits in the gap (`FUN_02321d14`'s gap is 0xa0 bytes but only 4 of them
+are its pool). **80 of the 189 banked matches - 42% - need this corrected
+size**, so treat `f["size"]` as a lower bound, not the answer.
+
+Known limitation: it only recovers pool truncation. Ghidra also mis-bounds
+jump-table functions (`FUN_02329a08` ends with an `add pc,rX` switch whose
+inline arms fall outside the cached size); those have no pool load, so
+`true_size()` correctly declines to extend and you still need the
+candidate-length check below.
+
 If a candidate is consistently N bytes *too long* and every instruction up
 to the target's declared end already matches, don't assume the source is
 wrong - check `tools/disasm.py --addr <target_end> --length 0x10` first.
