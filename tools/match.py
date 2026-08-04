@@ -71,7 +71,14 @@ NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4"] + CW20_SW
 # line cannot from any source phrasing.
 CW2004_SWEEP = ["2004/b56"]
 SWEEP = DSI_SWEEP + NTR_SWEEP + CW2004_SWEEP
-PINNED = CW20_SWEEP
+# The nine builds that satisfy ALL banked matches. 2.0/base is deliberately NOT
+# here: it is in CW20_SWEEP (so --all still reports it) but it is ruled out as
+# this ROM's compiler - five functions match every other 2.0/* build and not it.
+# PINNED is what --trio and tools/pr_linkcheck.py sweep, so keeping a
+# known-wrong build out of it stops a validator box that happens to have only
+# 2.0/base installed from reaching a wrong verdict.
+CW20_PINNED = [v for v in CW20_SWEEP if v != "2.0/base"]
+PINNED = CW20_PINNED
 
 # ---------------------------------------------------------------------------
 # THE TOOLCHAIN IS 2.0/*, NOT dsi/*  (settled 2026-08-04 - do not re-litigate

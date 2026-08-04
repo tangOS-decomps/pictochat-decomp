@@ -139,6 +139,60 @@ chasing a hard residual and wondering "is this actually a different,
 unvendored compiler build" - it almost certainly is not.** The full known
 universe of DSi-era CodeWarrior builds is already in `tools/mwccarm/`.
 
+## Provisioning the PR-validator build box
+
+The validator (`.github/workflows/pr-validate.yml` -> a private relay -> a build
+box that clones the repo and runs `tools/pr_linkcheck.py`) compiles every
+changed `src/arm{7,9}/*.c|*.cpp` and byte-compares it. The compilers are
+gitignored, so **the box needs its own copy of the pinned toolchain** - the
+repo cannot ship it.
+
+This bites when the pin changes. Moving the pin from `dsi/*` to `2.0/*` left
+the box provisioned with only the `dsi/*` set, and because `match.py`'s
+`compile_c()` returns `None` both for "not installed" and "your C is broken",
+every PR touching a src file was told its source *failed to compile*.
+
+**Check the box first - this is a one-liner, and it compiles a probe rather
+than just looking for files:**
+
+```
+python tools/check_toolchain.py          # exit 0 = can validate; --json for CI
+```
+
+It reports, per pinned build, whether `mwccarm.exe` is present, whether its
+support files are present, and whether a probe actually compiles; plus
+`license.dat`, and (off Windows) whether `MWCCARM_LAUNCHER` is set and `wine`
+is on PATH.
+
+**To provision:**
+
+1. Copy the pinned build directories into `tools/mwccarm/` on the box, keeping
+   the same layout as a dev machine:
+
+   ```
+   tools/mwccarm/2.0/sp1/     <- CANONICAL; the minimum needed to validate
+   tools/mwccarm/2.0/sp1p2/   ... and the rest of match.py's PINNED list
+   tools/mwccarm/license.dat  <- shared, one level up, not per-version
+   ```
+
+   Each version directory needs `mwccarm.exe` **plus** `ELFIO.dll`,
+   `MSL_All-DLL80_x86.dll`, `lmgr8c.dll`, `mwasmarm.exe` and `mwldarm.exe`.
+   `mwccarm.exe` alone fails at runtime with a DLL error that looks nothing
+   like "not installed". ~3.6 MB per version, ~36 MB for the whole `2.0` tree.
+
+2. Non-Windows box: install Wine and set `MWCCARM_LAUNCHER=wine` in the
+   validator's environment (`compile_c()` reads it and prefixes the command).
+
+3. Re-run `python tools/check_toolchain.py` and expect exit 0.
+
+**Minimum vs complete.** Only `2.0/sp1` (the `CANONICAL`) is strictly required
+- `pr_linkcheck.py` sweeps `PINNED` and accepts a match from any installed
+build, and all nine pinned builds are byte-equivalent across the entire banked
+corpus. Installing all nine is still preferable so a local `--trio` sweep and
+CI agree exactly. **Do not provision `2.0/base` alone**: it is deliberately
+excluded from `PINNED` because five banked functions match every other `2.0/*`
+build and not it, so a box holding only `base` would reach wrong verdicts.
+
 ## If you need to re-set-up on a fresh machine
 
 Same as `sm64ds-decomp`: get `mwccarm.zip` from the DS-decompilation Discord
