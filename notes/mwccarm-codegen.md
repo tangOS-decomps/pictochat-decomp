@@ -1241,6 +1241,68 @@ competition) plus this newly-confirmed-unfixable predication difference -
 three symptoms, all consistent with a single underlying register-allocation/
 scheduling floor rather than three separate bugs to chase independently.
 
+**Round 3g - swept the full mwccarm flag space (not just `-O`/version) looking
+for a missed compiler option, per a direct user question. Ruled out the whole
+remaining flag surface; along the way, corrected a wrong claim about this
+project's match state.** Dumped the complete `-help all,obsolete,...` listing
+from `mwccarm.exe` and tested every option plausibly relevant to codegen
+shape against all three hard residuals (`FUN_022d5540`, `FUN_022d5a64`,
+`FUN_022d5870`):
+
+- `-opt` per-pass toggles (`[no]cse`, `[no]loopinvariants`, `[no]lifetimes`,
+  `[no]prop`, `[no]strength`, `[no]deadcode`, `[no]deadstore`) - **byte-
+  identical to baseline in every case**, confirmed even against a probe
+  function hand-written to trigger CSE (`x=a+b; y=a+b;`). Not a testing bug:
+  the compiler's own `-help` text says so directly - "all options besides
+  `-opt off|on|all|space|speed|level=...` are for backwards compatibility;
+  other optimization options may be superceded by use of `-opt level=xxx`."
+  At `-O4` these suboptions are inert stubs. Worth banking so nobody re-tries
+  this specific idea later.
+- `-proc` (target core) swept across all ~25 values. Real, reproducible
+  signal: a cluster of cores (`v5t`, `arm7ej`, `arm1020e`, `arm1022e`,
+  `arm1026ej`, `XScale`, `pxa255`) all land on the same 4-byte-better result
+  for `FUN_022d5540` (0x338 vs the `-proc arm7tdmi` baseline's 0x33c) -
+  consistent across unrelated core families, not noise - while `v6`/`v6t2`/
+  `v7` make it worse (0x344) and several others regress relocation handling
+  in our own diff tooling entirely (a different literal-pool addressing
+  sequence throws off `fdiff`'s patch-in-the-resolved-address logic - a
+  tooling limitation, not evidence either way about the code). None reach a
+  match on any of the three functions. Since the DSi's ARM7 core is
+  definitively an ARM7TDMI in real hardware, and even the best alternate
+  core only closes 4 of 20 bytes, this reads as further evidence of a real
+  register/scheduling floor rather than a wrong `-proc` value.
+- `-pic`, `-pid`, `-constpool`/`-noconstpool`, `-ipa file`, `-align8` - no
+  effect on any of the three functions.
+
+While regression-checking these flag changes, tried to find already-verified
+arm7 matches to test against and initially misread `progress/matched.jsonl`:
+every arm7 record (and nearly every record project-wide) carries the version
+tag `sync:marker`, which I wrongly concluded meant "hand-written asm only,"
+leading me to (incorrectly) tell the user arm7 had zero real-compile
+verified matches anywhere in the project. That was wrong, and worth
+recording as a correction per this file's own honesty standard: `sync:marker`
+just means "banked via the bulk-sync tool using the file's own `// decomp:`
+marker for verification," and covers genuine compiled C matches as well as
+asm stubs. Direct proof: `src/arm7/FUN_022c59a4.cpp` (a real, non-trivial
+doubly-linked-list unlink, no asm) matches byte-exact on **all 22** tracked
+compiler versions once compiled with the correct arm-mode flags (my first
+attempt used the wrong ones - `tools/match.py --c` doesn't know a given
+file's ARM/Thumb mode unless the file's own `// flags:` marker says so or
+`--flags` is passed explicitly; `FUN_022c59a4.cpp` has neither, so it
+silently thumb-compiled by default and looked like a fail). This is good
+news for the project as a whole: it confirms the standard baseline
+(`-O4,p`/`-O4,s`, `-proc arm7tdmi`, the rest of `DEFAULT_FLAGS_ARM7`) does
+produce genuine byte-exact matches on real arm7 logic, so the three hard
+residuals' gap is a narrow, real edge case, not a symptom of an unproven or
+wrong project-wide compiler configuration.
+
+**Net effect of this round**: the compiler-flag search space is now
+exhausted for these three functions - `-O` level/space-speed and dsi
+point-release (section 3e) are the only flag-level levers that did anything,
+and both are already applied in the current best candidates. Further
+progress here most likely requires either the unread `sm64ds-decomp` notes
+sections (section 4) or accepting these three as a documented floor for now.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
