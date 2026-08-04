@@ -617,6 +617,25 @@ this session after 5 ARM-mode arm7 matches had already been banked without
 the marker - all fixed retroactively; check for it on any future ARM-mode
 `arm7` bank.
 
+**A sharper version of the same trap: passing `--flags` on the CLI replaces the
+ENTIRE base flag set, not just the `-O` token.** `main()` does
+`flags = args.flags or DEFAULT_FLAGS_ARM7` - if `--flags` is given at all, even
+just `"-O4,s -noThumb"` to force an opt-level/mode override during iteration,
+`-enum int -lang c99 -char signed -interworking -proc arm7tdmi -gccext,on
+-msgstyle gcc` are ALL silently dropped, not merged in. For most functions this
+is harmless (nothing in a plain C89-style draft depends on those flags), which
+makes it easy to develop a habit of typing an abbreviated `--flags` string during
+iteration and never notice - until a function that DOES depend on one of them
+(confirmed on `FUN_022d5540`: one of `-proc arm7tdmi`/`-gccext,on`/the others
+changed whether the epilogue got the `pop{...,pc}` fold - a real, structural
+4-byte difference, not noise) silently produces a wrong number that then gets
+believed for an entire round of iteration. **The safe pattern**: for a file that
+already carries a `// flags: ...` marker, don't pass `--flags` on the CLI at all -
+let the marker substitute into the real, complete default flags. Only pass
+`--flags` explicitly when you need something the marker system can't express,
+and when you do, copy the FULL flag string (`DEFAULT_FLAGS_ARM7`/`DEFAULT_FLAGS`
+plus your override), never an abbreviated one.
+
 ## A base-pointer caching floor: the compiler's CSE-across-calls choice doesn't reliably respond to source phrasing
 
 A third recurring near-miss, seen on 3 sibling arm7 functions this session
