@@ -967,11 +967,39 @@ thinks to write), wrapped just the `first`/`cur` test region in `PERM_RANDOMIZE`
 - real random mutation, concentrated entirely on the ~15 lines that are actually
 wrong. Ran for the full 1200s budget: 16,377 iterations, best score plateaued at
 8240, error count non-convergent (climbing 37→38 across the run) - no match
-found. This is the most rigorous, correctly-configured search run against this
-residual to date (properly scoped AND correctly scored, unlike every prior
-permuter attempt on this function), and it still didn't converge - strong
-evidence this residual is not permuter-reachable via random mutation regardless
-of scope.
+found. ~~This is the most rigorous, correctly-configured search run against this
+residual to date~~
+
+**Correction (found next round): that search was NOT correctly configured after
+all - a second, more consequential `tools/permuter/import_func.py` bug meant it
+never actually tested this project's real iteration baseline.**
+`setup_dir()` computed the permuter's compile flags via `flags_for(module, mode)`
+alone, which only knows arm7-vs-arm9 and arm-vs-thumb - it never applies the
+seed's own `// flags: ...` marker the way `match.py`/`fdiff.py` both do via
+`apply_flags_marker()`. Since this whole investigation's structural wins (exact
+register set, exact push/pop, exact total size) all specifically require
+`-O4,s` rather than the default `-O4,p`, and the seed's `// flags:` marker was
+never being read, **the 16,377-iteration run above was silently compiled and
+scored entirely at `-O4,p`** - a genuinely different compiler configuration from
+the one every other conclusion in this document is based on. Confirmed directly
+by inspecting the generated `flags.txt` for that run's working directory before
+the fix (showed `-O4,p`) and after (showed `-O4,s`, matching the seed's marker).
+This also revealed the seed file's own `// flags:` marker was itself incomplete
+(only `-noThumb`, missing the `-O4,s` override this whole investigation depends
+on) - fixed alongside `BEST_dsi13.c`'s matching marker gap.
+
+Fixed `import_func.py` to apply `apply_flags_marker()` (committed, PR #41) and
+re-ran the identical scoped `PERM_RANDOMIZE` search under the corrected `-O4,s`
+baseline: base score 5145 (vs the invalid run's ~10915-11055 - confirming the
+configurations really were different, not just a scoring-noise difference), full
+1500s budget, 13,646 iterations, error count settled at 24 (still nonzero, still
+non-convergent), best score 4155. **Still no match** - so the qualitative
+conclusion (this residual is not permuter-reachable via random mutation) holds,
+but now on a genuinely correctly-configured run rather than the flawed one
+originally reported. Worth remembering: a permuter "negative result" is only as
+trustworthy as its import configuration - check the generated `flags.txt`
+against the seed's own marker before trusting a non-convergent run as meaningful
+evidence, not just the seed's compile-success/failure.
 
 **Where this leaves it.** The mechanism is now understood with real precision
 (a straight `cur`-vs-`index` competition for one register, not a vague "cur needs
@@ -1073,13 +1101,53 @@ fixed both files' `// flags:` markers to include `-O4,s` explicitly so future
 work can safely omit `--flags` entirely rather than depending on remembering
 to re-type it correctly every time.
 
+**Round 3d - the "spill slots grouped by TYPE" lever (sm64ds section, `func_020319fc`)
+tried against `prevIdx`/`firstKept`, a second permuter tooling bug found and
+fixed, then a properly-configured scoped search - still not matched.**
+
+sm64ds-decomp's own notes document a real case where a stack-slot-ordering
+residual was fixed purely by changing a local's declared type
+(`unsigned int` -> `int`, "signed/unsigned was pinning the slot grouping") -
+untried on this project's own `prevIdx`/`firstKept` question until this round.
+Swept 9 combinations (`int`/`unsigned int`/`short`/`signed short` crossed
+against the original `unsigned short`, both orders) - every combination is
+either identical to the `unsigned short`/`unsigned short` baseline (0x340) or
+measurably worse (up to 0x368 for `signed short`/`signed short`); none improve
+on it. This specific lever doesn't transfer to this specific pair, joining
+declaration-order, inlining, and address-taking/volatile as techniques that
+have now all failed against this exact competition.
+
+**A second, more consequential `import_func.py` bug found while setting up a
+scoped permuter search for this function** - the same root cause already
+documented in section 3a's correction above (`setup_dir()` never applies the
+seed's `// flags:` marker, so every permuter import silently used `-O4,p`
+instead of the `-O4,s` this whole investigation's structural wins depend on).
+Fixed once, generally, in `import_func.py` (PR #41) - benefits every future
+permuter import on any function, not just this one or `FUN_022d5a64`.
+
+With the corrected `-O4,s` baseline, wrapped both of this function's own
+unresolved regions - the `queueHeadBase`/`typeFlagBase`/`firstKept`/`prevIdx`
+per-queue setup block, and the `prevIdx`/`firstKept` update block inside the
+inner loop - in `PERM_RANDOMIZE` and ran the full 1500s budget: 16,390
+iterations, error count climbing to 147 (non-convergent), best score 4180 (down
+from a base ~5630, but nowhere near 0). Inspected the single best-scoring
+candidate directly: a plausible but minor mutation (factoring `queueHeadBase +
+q*4` into one shared temp reused for both `cur`'s dereference and `qhead`'s
+assignment, and chaining `firstKept = (prevIdx = 0xFFFF)`) - not a real
+structural insight, not close to a match. **Still not matched.**
+
 **Where this leaves it**: `scratch/FUN_022d5540_BEST.c` - exact register push
 set (9/9), exact epilogue (verified structurally correct, not a size
 coincidence), correct overall control flow (verified against a full hand-trace,
 not guessed). 0x340 vs target's 0x328, 24 bytes / 6 instructions over,
-concentrated entirely in the two mechanisms above. Not matched, but the
-strongest first-attempt result any of this cluster's three hard functions has
-had this session.
+concentrated entirely in the two mechanisms above, both now confirmed resistant
+to every technique tried (type-based, declaration-order, inlining, and a
+correctly-configured scoped random search). Not matched, but the strongest
+first-attempt result any of this cluster's three hard functions has had this
+session, and now with the SAME residual-class confirmation across all three
+(`FUN_022d5870`'s original wall, `FUN_022d5a64`'s `cur`/`index`, this function's
+`prevIdx`/`firstKept`) under properly-configured tooling rather than a mix of
+valid and invalid measurements.
 
 ## 4. Where to look next
 
