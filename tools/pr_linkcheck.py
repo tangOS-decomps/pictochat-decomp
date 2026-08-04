@@ -115,12 +115,15 @@ def resolve_flags(cfile: pathlib.Path, src_text: str, module: str) -> list[str]:
     if src_text.startswith("//cpp") and "-lang c99" in flags:
         flags = flags.replace("-lang c99", "-lang c++")
     if "// flags: " in src_text:
-        extra = src_text.split("// flags: ")[1].split("\n")[0].strip()
-        if "-arm" in extra or "-noThumb" in extra:
-            flags = flags.replace(" -thumb", "")
-        else:
-            flags += " " + extra
-        return [flags]  # explicit override: this is the one true answer, no guessing
+        # Delegate to match.py's apply_flags_marker() instead of reimplementing
+        # it. The old local copy treated the marker as EITHER an opt-level
+        # override OR a -noThumb strip, so a marker carrying BOTH (e.g.
+        # `// flags: -O4,s -noThumb`, which FUN_022d5a64 needs) silently kept
+        # the default -O4,p and reported a real match as NO-REPRO.
+        # apply_flags_marker applies every token structurally - notably it
+        # REPLACES the base -O token rather than appending a second one, which
+        # mwccarm mis-handles (see notes/tooling.md).
+        return [M.apply_flags_marker(flags, src_text, allow_thumb_heuristic=False)]
     if re.search(r"\basm\b", src_text) and "-thumb" in flags:
         # match.py's own heuristic here is a preference, not a certainty: at
         # least one real file (FUN_02332d10, a bare SWI trampoline) documents
@@ -146,6 +149,14 @@ def check_file(path: str, idx: dict):
         return {"file": path, "symbol": None, "verdict": "UNRESOLVED",
                 "detail": "no `// decomp: module=... addr=... name=...` header"}
     module, addr, name = header.group(1), int(header.group(2), 16), header.group(3)
+
+    if "// NONMATCHING:" in src_text:
+        # Parked by tools/nonmatching.py: a logic-correct decompilation that is
+        # deliberately NOT byte-exact. tools/progress.py counts these
+        # separately; failing a PR because one does not reproduce would just be
+        # re-reporting what the file already declares about itself.
+        return {"file": path, "symbol": name, "verdict": "PARKED",
+                "detail": "parked `// NONMATCHING:` - not expected to reproduce byte-for-byte"}
 
     if name not in idx:
         # Not fatal -- Ghidra's boundary table isn't the size source of truth
@@ -176,7 +187,7 @@ def check_file(path: str, idx: dict):
                 continue
             any_compiled = True
 
-            code, relocs = M.extract_func(obj, name)
+            code, relocs, _reloc_info = M.extract_func(obj, name)
             if code is None:
                 # The header's name is descriptive (address-based), not
                 # necessarily the real link symbol -- true for every C++ class
@@ -185,7 +196,7 @@ def check_file(path: str, idx: dict):
                 for cand_name in emitted_func_symbols(obj):
                     if cand_name == name:
                         continue
-                    cand_code, cand_relocs = M.extract_func(obj, cand_name)
+                    cand_code, cand_relocs, _ = M.extract_func(obj, cand_name)
                     if cand_code is None:
                         continue
                     try:
@@ -235,6 +246,7 @@ _LABEL = {
     "NO-REPRO":     "❌ near-miss (does NOT reproduce the binary)",
     "COMPILE-FAIL": "❌ compile failed",
     "UNRESOLVED":   "🔶 unresolved (no header / not in symbols.txt)",
+    "PARKED":       "⏸️ parked NONMATCHING (logic-correct, not byte-exact by declaration)",
 }
 _FAIL = {"NO-REPRO", "COMPILE-FAIL"}
 
@@ -246,7 +258,15 @@ def render_md(reports, bad):
         kinds = ", ".join(sorted({r["verdict"] for r in reports if r["verdict"] in _FAIL}))
         out.append(f"**{len(bad)} of {n} changed file(s) do not compile/match** ({kinds}).")
     else:
-        out.append(f"**All {n} changed file(s) compile to the extracted binary byte-for-byte.**")
+        n_ver = sum(1 for r in reports if r["verdict"] == "VERIFIED")
+        n_park = sum(1 for r in reports if r["verdict"] == "PARKED")
+        n_unres = sum(1 for r in reports if r["verdict"] == "UNRESOLVED")
+        bits = [f"{n_ver} verified byte-for-byte"]
+        if n_park:
+            bits.append(f"{n_park} parked NONMATCHING (not expected to reproduce)")
+        if n_unres:
+            bits.append(f"{n_unres} unresolved")
+        out.append(f"**{n} changed file(s): " + ", ".join(bits) + ".**")
     out.append("")
     out.append("_Relocation **destinations** are not yet verified for this repo "
                 "(no config/**/relocs.txt) -- only instruction words and reloc "
