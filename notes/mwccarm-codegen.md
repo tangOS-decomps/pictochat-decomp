@@ -1503,6 +1503,56 @@ missing version - the search has been done. Also fixed a stale claim in
 machine; re-verified, it launches fine now and has been contributing real
 (not silently-failed) data to every `--all` sweep this session.
 
+## 3l. Bisected `FUN_022d5540`'s remaining 4 bytes to an exact instruction and
+statement-order cause - a real trade-off, not a fix
+
+Went looking for the exact source of the round-3j candidate's one extra word
+rather than guessing at macro respellings again. Disassembled the compiled
+candidate directly (capstone) and computed the absolute target of every
+`ldr rX, [pc, #N]` pool load, rather than reading the diff by eye:
+
+```
+0x0008  ldr r2, [pc, #0x314]  -> pool@0x0324   (G_023190dc, a real reloc)
+0x009c  ldr r0, [pc, #0x284]  -> pool@0x0328   (the extra word)
+0x02b8  ldr r0, [pc, #0x68]   -> pool@0x0328   (same slot, second reference)
+```
+
+Only ONE extra pool word exists (not two, as the earlier "duplicate" framing
+implied) - `0x9c` and `0x2b8` both correctly SHARE a single `0xFFFF`
+(`QSENTINEL`) slot. The `0x2b8` reference is legitimate: target has the exact
+same pool load at the matching offset, for the matching comparison (the
+`conn+0x600+0xfa` sentinel check near the end). The `0x9c` reference is the
+real problem - it sits inside `firstKept = QSENTINEL; prevIdx = QSENTINEL;`
+at the top of the do-while loop, a region target's own disassembly has NO
+form of at all (this whole block is a pure `insert`, absent from target).
+
+**Reordering the two statements (`prevIdx` first, `firstKept` second, or
+equivalently deriving one from the other: `prevIdx = QSENTINEL; firstKept =
+prevIdx;`) removes the pool word entirely** - confirmed both ways give
+byte-identical results (0x324). But this isn't a fix: real-instruction count
+drops from 202 (matching target) to 200, and `fdiff --align` shows the two
+"missing" instructions land in two other spots - one is the SAME `cond-opt`
+predication floor already confirmed structural in round 3i/6u (the
+`(entry[1]&8)==0 && entry[9]==0` guard, which apparently interacts with
+available-register pressure from this specific spot even though its own
+source phrasing is proven unfixable), the other a redundant `mov r1,#0`
+near the final unlock call that the reordering's freed-up register makes
+mwcc fold away. **Net: 0x324 (4 bytes UNDER target) instead of 0x32c (4
+bytes over)** - trading one known-shaped gap for a different, not-obviously-
+better one. The original statement order (`firstKept` then `prevIdx`,
+already in `scratch/FUN_022d5540_BEST.c`) remains the best candidate; this
+reordering is not an improvement, just a different floor.
+
+**What this bisection actually establishes**: the extra pool word is
+directly, causally tied to `firstKept`/`prevIdx` statement order at this one
+spot - not a vague "instruction selection, no lever" floor as originally
+suspected in round 3j. There IS a lever; it just spends its win somewhere
+this project doesn't want to spend it. Anyone picking this back up should
+look for a THIRD way to write this reset (not tried: an explicit temp
+holding the sentinel value shared via a form that doesn't trigger either
+side effect, or attacking the downstream predication/mov cost directly so
+the reordered version's savings elsewhere don't need to be given back).
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
