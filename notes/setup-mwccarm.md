@@ -59,10 +59,33 @@ the wrong size, try toggling it with `--flags`.
 
 The `2004/b56` build is a separate, experimental recovery (see
 `tools/recover_cw2004.py`'s docstring for the archive.org range-fetch
-technique) and is known **not to launch** on this machine
-(`STATUS_INVALID_IMAGE_FORMAT`, likely a DLL mismatch from borrowing runtime
-DLLs across build lines). Harmless to keep, not load-bearing - use the
-verified `1.2`/`2.0`/`dsi` sets above.
+technique). Earlier notes here said it did not launch
+(`STATUS_INVALID_IMAGE_FORMAT`) - **re-verified 2026-08-04, it launches fine**
+(`mwccarm.exe -version` reports `Metrowerks C/C++ for Embedded ARM ...
+Version 2.0 build 56`), so whatever DLL mismatch caused that is no longer an
+issue on this machine. It's included in `--all`/`--trio` sweeps for real, not
+silently no-op'd.
+
+**Is the vendored build set complete?** Checked 2026-08-04 by reading the 7z
+header of the archive.org-preserved Metrowerks FTP mirror
+(`archive.org/details/ftp_metrowerks_updates.7z`, see
+`tools/recover_cw2004.py`'s technique) and, more relevantly, the file list of
+`archive.org/details/cw_consoles` - a separately-preserved, dated mirror of
+Nintendo's own official DSi CodeWarrior distribution channel. Its `DSi/`
+folder has exactly nine builds, one-to-one with what's vendored here:
+`cw_dsi-1_1-20081209.zip` + `-patch1-20090525` (= `1.1`/`1.1p1`),
+`cw_dsi-1_2-20091006.zip` + `-patch1-20091027` + `-patch2-20100121` (=
+`1.2`/`1.2p1`/`1.2p2`), `cw_dsi-1_3-20100413.zip` + `-patch1-20100615` (=
+`1.3`/`1.3p1`), `cw_dsi-1_6-sp1-20110929.zip`, `cw_dsi-1_6-sp2-20120312.zip`.
+No `1.4`, `1.5`, or plain `1.6` exists in that archive - the version-number
+gap is how Nintendo itself numbered these SDK releases, not a hole in this
+project's toolchain set. The Metrowerks FTP mirror's own `CWARM/` folder
+(the pre-Freescale-acquisition public line) tops out at `CW_ARM_2.1.1_Update.exe`
+(Oct 2004, already recovered as `2004/b56`) - nothing there is more recent or
+DSi-relevant than what's already vendored either. **Conclusion: for anyone
+chasing a hard residual and wondering "is this actually a different,
+unvendored compiler build" - it almost certainly is not.** The full known
+universe of DSi-era CodeWarrior builds is already in `tools/mwccarm/`.
 
 ## If you need to re-set-up on a fresh machine
 
