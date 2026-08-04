@@ -226,8 +226,23 @@ def check_file(path: str, idx: dict):
                 break
 
     if not any_compiled:
+        # Distinguish "this box has no compiler to try" from "the file is bad".
+        # M.compile_c() returns None for both, and reporting a toolchain gap as
+        # COMPILE-FAIL blames the PR for an infrastructure problem. This is not
+        # hypothetical: when the project pin moved from dsi/* to 2.0/* the
+        # validator box still only had the dsi/* set installed, and every PR
+        # touching a src file was told its C "failed to compile".
+        missing = [v for v in M.PINNED if not (M.MW / v / "mwccarm.exe").is_file()]
+        if len(missing) == len(M.PINNED):
+            return {"file": path, "symbol": name, "verdict": "UNRESOLVED",
+                    "detail": ("cannot validate: NONE of the pinned mwccarm versions are "
+                                f"installed on this machine ({', '.join(M.PINNED)}). This is a "
+                                "build-box provisioning gap, not a problem with this file - "
+                                "install the pinned toolchain (see notes/setup-mwccarm.md).")}
         return {"file": path, "symbol": name, "verdict": "COMPILE-FAIL",
-                "detail": f"mwccarm failed to compile this file under every swept version ({', '.join(M.PINNED)})"}
+                "detail": ("mwccarm failed to compile this file under every swept version "
+                            f"({', '.join(v for v in M.PINNED if v not in missing)})"
+                            + (f"; not installed here: {', '.join(missing)}" if missing else ""))}
     if best is None:
         return {"file": path, "symbol": name, "verdict": "COMPILE-FAIL",
                 "detail": "compiled, but no emitted symbol matched the header name or the target address"}
