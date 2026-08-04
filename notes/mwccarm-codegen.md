@@ -54,6 +54,13 @@ lever before assuming CSE elimination is unreachable.
 
 ## 2. The pure-coloring wall: ruled out, this compiler build, `FUN_022d5870`
 
+**CORRECTION (2026-08-04, section 3n): this whole section was written against
+a truncated target size (`0x1ec` instead of the true `0x1f4` - see 3n for how
+that was found). Redone against the correct size, this is NOT a pure-coloring
+residual - it's a `mask`-vs-`typeFlagBase` register-priority inversion. Treat
+this section as historical/superseded, not settled; read 3n before spending
+more time here.**
+
 After levers 1a/1b closed every structural/idiom gap on `FUN_022d5870`, one residual
 remained: a base pointer (`conn`, loaded once from a global at function top, used
 throughout) colors to `r4` in every candidate tried; the ROM has it in `sb` (r9).
@@ -1636,6 +1643,79 @@ disassembly of the candidate side by side with the target and naming every
 difference concretely, rather than reasoning from `fdiff` block summaries. Two
 of the seven levers above (the `index` width and the `typeFlagBase` sink) were
 invisible in the block view and obvious in the linear view.
+
+## 3n. Applying the `FUN_022d5a64` discoveries to the other two hard functions:
+both are ALSO size-truncated, neither is a family mismatch, `FUN_022d5870`'s
+"settled" wall needs reopening
+
+Direct follow-up to 3m: checked whether the two discoveries that cracked
+`FUN_022d5a64` (truncated target size; wrong compiler family) apply to
+`FUN_022d5540` and `FUN_022d5870` too.
+
+**Both are also size-truncated, by the same mechanism.** Checked the gap
+between each function's declared end and the next function's start address
+(`next_addr - (addr + size)` from `tools/funcs.py` - the same check 3m
+recommends doing routinely now). Both gaps are 8 bytes, and both contain the
+exact same two-word pattern as `FUN_022d5a64`: `&G_023190dc` then
+`0x0000ffff` (`QSENTINEL`) - each function's own trailing pool, excluded by
+Ghidra's flow-based boundary. Corrected sizes:
+
+| function | funcs.json size | true size | gap contents |
+|---|---|---|---|
+| `FUN_022d5540` | 0x328 | **0x330** | `&G_023190dc`, `0xffff` |
+| `FUN_022d5870` | 0x1ec | **0x1f4** | `&G_023190dc`, `0xffff` |
+| `FUN_022d5a64` | 0x1fc | 0x204 (fixed, 3m) | `&G_023190dc`, `0xffff` |
+
+All three functions in this immediate neighborhood (`0x22d5540`-`0x22d5a64`)
+share this exact pattern - they all reference the same global and the same
+sentinel constant, and CodeWarrior doesn't dedupe pool constants across
+functions. **Always verify with the corrected size for any of these three
+going forward**; `scratch/FUN_022d5540_BEST.c` and `scratch/FUN_022d5870_v13.c`
+now carry a header comment saying so.
+
+**Neither is a wrong-family match** (unlike `FUN_022d5a64`). Swept all 25
+vendored builds against both functions at their corrected sizes:
+`FUN_022d5540` stays closest under `dsi/1.1` (unchanged from section 3e -
+`2.0/*` is close, 29 blocks vs `dsi/1.1`'s 27, but not better);
+`FUN_022d5870` is IDENTICAL under every `dsi/*` and `2.0/*` build (19 blocks
+either way), diverging only for the older `1.2/*`/`2004/b56` lines. So this
+project's dominant `dsi/1.x` pin is confirmed correct for this neighborhood -
+`FUN_022d5a64`'s `2.0/*` match looks like a genuine outlier (maybe a
+different translation unit or an older source file linked in unchanged),
+not a sign the whole area needs re-homing.
+
+**`FUN_022d5870`'s size correction changes what the residual actually is.**
+Round 9 (this file, section 2) called this function's gap a "pure
+register-coloring wall" - one variable (`conn`) coloring to `r4` where the
+ROM has `sb`, everything else byte-identical - and declared it settled after
+10 rounds and 12+ techniques, all against the WRONG (truncated) target. Redone
+against the corrected `0x1f4`: the diff is NOT pure coloring. Reading the two
+full linear disassemblies side by side (the same method that closed
+`FUN_022d5a64` - block-summary diffs hide this kind of thing) shows target
+keeps `mask` resident in `fp` for the ENTIRE function (used every loop
+iteration, the hot path: `entry[3] &= mask; entry[5] &= mask;`) while
+`typeFlagBase` is computed once and spilled to a stack slot, reloaded on
+demand (used only inside the colder "notify" branch). The current best
+candidate (`v13`) has this the other way around: `typeFlagBase` occupies `fp`
+and `mask` is the one spilled and reloaded twice. This is a REGISTER-PRIORITY
+inversion, not a pure coloring permutation - the allocator is picking the
+colder value to keep resident.
+
+Tried to fix the priority the direct ways: narrowing `typeFlagBase`'s
+declaration scope to just the `notify` block (per sm64ds lever 6y-2, shallower
+scope should rank lower) - it got WORSE, `typeFlagBase` grabbed `fp` even
+more directly, contradicting 6y-2's stated direction on this compiler build;
+widening/narrowing `mask`'s type (`unsigned int`, `unsigned short`) - the
+`unsigned short` form incidentally reaches the exact correct SIZE (124 insns,
+0x1f4 bytes) but not the correct coloring, still spills `mask`; a
+zero-instruction self-select priority booster on `mask` (`x = cond?x:x`, per
+6y-1) - no effect at all, byte-identical to baseline. None reproduced target's
+actual allocation. Recorded as three more ruled-out techniques on what should
+now be treated as a REOPENED problem with a precisely-identified mechanism
+(mask-vs-typeFlagBase priority), not the closed pure-coloring wall the notes
+previously described - the next person to pick this up should start from "why
+does mask lose to typeFlagBase" rather than re-running the general coloring
+playbook from scratch.
 
 ## 4. Where to look next
 
