@@ -1411,8 +1411,72 @@ neither with better luck than the earlier round's dozen:**
   automatically free here.
 
 `FUN_022d5540`'s two structural mechanisms and the round-3h `#pragma
-opt_common_subs off` trade-off remain the complete, unchanged state of this
-function after this round.
+opt_common_subs off` trade-off remained the state of this function through
+this point in the round - see 3j immediately below for what came next in the
+same session.
+
+## 3j. Combining `#pragma opt_loop_invariants off` with `#pragma
+opt_common_subs off` on `FUN_022d5540`: 4 bytes over target, exact register
+set, exact instruction count - the closest result of the entire multi-session
+investigation
+
+Section 6z of sm64ds-decomp's notes (read as a follow-on to 3i's 6u/6w/6y)
+opens with an item directly relevant to `FUN_022d5540`'s still-open LICM+spill
+mechanism: **"`#pragma opt_loop_invariants off` is NOT inert on larger
+functions"** - the small-function verdict from section 6f doesn't generalize,
+mirroring round 3h's finding for `opt_common_subs`. Tested immediately:
+
+- **`#pragma opt_loop_invariants off` alone**: 0x330 (dsi/1.1) - even better
+  than round 3h's `opt_common_subs off` alone (0x334), but the same kind of
+  trade-off - the exact 9-register push again breaks, again pulling in `r3`
+  as an extra pad register.
+- **Both pragmas together (`opt_loop_invariants off` + `opt_common_subs
+  off`)**: **0x32c - only 4 bytes over target's 0x328, with the exact
+  9-register push/pop preserved (`r4,r5,r6,r7,r8,sb,sl,fp,lr`) AND exactly
+  202 real instructions matching target's 202** (one previous best was 20
+  bytes over with the exact register set; this is 4 bytes over with the
+  exact register set AND exact instruction count - the two pragmas fix
+  complementary parts of the function, and combining them doesn't reintroduce
+  either one's individual regression). This is the single closest result
+  reached across this entire multi-session investigation, on any of the three
+  hard functions, by a wide margin. **Promoted to `scratch/FUN_022d5540_BEST.c`.**
+- Declaration-order resweep (6 orderings of `queueHeadBase`/`cur`/`qhead`/
+  `typeFlagBase`/`firstKept`/`prevIdx`) under this new baseline: no change,
+  all 0x32c - this compiler build's allocator is insensitive to decl order
+  for this variable set regardless of which pragmas are active.
+- Version-swept the new baseline (`--trio` and `--all`, all 9 `dsi/*` point
+  releases plus every other tracked build): `dsi/1.1` remains the closest at
+  0x32c; nothing reaches a match.
+
+**What the remaining 4 bytes are**: the raw compiled tail is
+`...f04fbde8 1eff2fe1 00000000 ffff0000` (`pop`, `bx lr`, then two more
+words). The `00000000` word is a not-yet-linked relocation placeholder (the
+last of 8 relocs, resolving to the pooled `G_023190dc` global - expected and
+already wildcarded in comparison). The genuinely extra word is the LAST one,
+`ffff0000` - as a little-endian 32-bit value this is `0x0000ffff`, i.e. this
+function's own `QSENTINEL` (`0xFFFF`) constant, pooled a second time beyond
+whatever pool slot the other 13 `QSENTINEL` references already share.
+
+**Tried and failed to remove it** (all byte-identical to each other, 0x32c):
+respelling the macro (`0xFFFFu`, `((unsigned short)0xFFFF)`,
+`((unsigned short)-1)`) and replacing every body use of the macro with a
+single named local initialized once and reused everywhere. None of these
+source-level changes moved the duplicate pool entry at all - strong evidence
+this is the same class of floor sm64ds's section 6d already named and closed
+the book on: **"Pool-load of an immediate-encodable constant... Instruction-
+selection choice, no C99 lever found."** Not re-attempted further this round;
+flagged as the single most promising remaining thread for a future session
+specifically because everything else about this candidate is now exactly
+right.
+
+**Also tried the same pragma combination on the other two hard functions**:
+`FUN_022d5870` unaffected (still 0x1f0, no different from `opt_common_subs
+off` alone in round 3h); `FUN_022d5a64` compiles to exactly 0x1fc (matching
+target's own size for the first time under any configuration tried this
+session) but is not actually closer in content - still the same known
+126-vs-127-real-instruction shape from section 3a, just coincidentally
+padded to the same total byte count. Not a new lever for that function,
+noted for completeness.
 
 ## 4. Where to look next
 
