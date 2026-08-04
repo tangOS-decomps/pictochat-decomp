@@ -54,6 +54,13 @@ lever before assuming CSE elimination is unreachable.
 
 ## 2. The pure-coloring wall: ruled out, this compiler build, `FUN_022d5870`
 
+**CORRECTION (2026-08-04, section 3n): this whole section was written against
+a truncated target size (`0x1ec` instead of the true `0x1f4` - see 3n for how
+that was found). Redone against the correct size, this is NOT a pure-coloring
+residual - it's a `mask`-vs-`typeFlagBase` register-priority inversion. Treat
+this section as historical/superseded, not settled; read 3n before spending
+more time here.**
+
 After levers 1a/1b closed every structural/idiom gap on `FUN_022d5870`, one residual
 remained: a base pointer (`conn`, loaded once from a global at function top, used
 throughout) colors to `r4` in every candidate tried; the ROM has it in `sb` (r9).
@@ -1586,10 +1593,14 @@ which is one instruction cheaper in the epilogue and so preferred under
 phrasing, pragma, `-O` level or `-proc` value flipped that under `dsi/*`;
 switching family flipped it immediately and took the diff from 15 blocks to 6.
 **Sweep the family before declaring a frame-shape floor** - section 3k
-established that no compiler build is *missing* from this repo, but it did not
-establish that every function comes from the same one, and this one doesn't.
-Whether other arm7 functions are also `2.0/*` is now an open and high-value
-question for the rest of the module.
+established that no compiler build is *missing* from this repo, but it had not
+yet established WHICH one built this ROM.
+
+~~and this one doesn't. Whether other arm7 functions are also `2.0/*` is now
+an open question~~ - **resolved the same day, and the hedge was wrong: `2.0/*`
+is the toolchain for the WHOLE project** (section 3o, `notes/setup-mwccarm.md`,
+`CANONICAL` in `tools/match.py`). This function was never an "outlier"; it was
+the first function complex enough to discriminate between the families at all.
 
 **The source-level levers that closed the remaining gap**, in the order they
 paid off (all verified individually, several only worked in combination -
@@ -1636,6 +1647,151 @@ disassembly of the candidate side by side with the target and naming every
 difference concretely, rather than reasoning from `fdiff` block summaries. Two
 of the seven levers above (the `index` width and the `typeFlagBase` sink) were
 invisible in the block view and obvious in the linear view.
+
+## 3n. Applying the `FUN_022d5a64` discoveries to the other two hard functions:
+both are ALSO size-truncated, neither is a family mismatch, `FUN_022d5870`'s
+"settled" wall needs reopening
+
+Direct follow-up to 3m: checked whether the two discoveries that cracked
+`FUN_022d5a64` (truncated target size; wrong compiler family) apply to
+`FUN_022d5540` and `FUN_022d5870` too.
+
+**Both are also size-truncated, by the same mechanism.** Checked the gap
+between each function's declared end and the next function's start address
+(`next_addr - (addr + size)` from `tools/funcs.py` - the same check 3m
+recommends doing routinely now). Both gaps are 8 bytes, and both contain the
+exact same two-word pattern as `FUN_022d5a64`: `&G_023190dc` then
+`0x0000ffff` (`QSENTINEL`) - each function's own trailing pool, excluded by
+Ghidra's flow-based boundary. Corrected sizes:
+
+| function | funcs.json size | true size | gap contents |
+|---|---|---|---|
+| `FUN_022d5540` | 0x328 | **0x330** | `&G_023190dc`, `0xffff` |
+| `FUN_022d5870` | 0x1ec | **0x1f4** | `&G_023190dc`, `0xffff` |
+| `FUN_022d5a64` | 0x1fc | 0x204 (fixed, 3m) | `&G_023190dc`, `0xffff` |
+
+All three functions in this immediate neighborhood (`0x22d5540`-`0x22d5a64`)
+share this exact pattern - they all reference the same global and the same
+sentinel constant, and CodeWarrior doesn't dedupe pool constants across
+functions. **Always verify with the corrected size for any of these three
+going forward**; `scratch/FUN_022d5540_BEST.c` and `scratch/FUN_022d5870_v13.c`
+now carry a header comment saying so.
+
+**~~Neither is a wrong-family match (unlike `FUN_022d5a64`)~~ - WRONG, see
+the correction below.** Swept all 25 vendored builds against both functions at
+their corrected sizes: `FUN_022d5540` looked closest under `dsi/1.1` (`2.0/*`
+29 blocks vs `dsi/1.1`'s 27); `FUN_022d5870` scored IDENTICALLY under every
+`dsi/*` and `2.0/*` build (19 blocks either way). I read that as "the `dsi/1.x`
+pin is confirmed for this neighborhood, and `FUN_022d5a64`'s `2.0/*` match is
+a genuine outlier - maybe a different translation unit."
+
+**CORRECTION (same day, section 3o): that conclusion was wrong, and the
+reasoning behind it was worse than the conclusion.** "This one function used a
+different compiler" is not a real explanation - a single ROM is built by ONE
+toolchain. A block-count that is *equal or slightly worse* under a family
+carries no weight against a function that matches that family BYTE-EXACTLY and
+cannot be built by the other one at all. The correct reading of `FUN_022d5a64`
+was always "this is the toolchain"; the two block counts above are just noise
+from drafts that had been hand-tuned against `dsi/*` for several rounds
+(including `FUN_022d5540_BEST.c`'s two `dsi`-era pragmas, which compensate for
+`dsi` behaviour and are not necessarily right under `2.0/*`). **The project
+pin is now `2.0/base`** - see 3o and `notes/setup-mwccarm.md`.
+
+**`FUN_022d5870`'s size correction changes what the residual actually is.**
+Round 9 (this file, section 2) called this function's gap a "pure
+register-coloring wall" - one variable (`conn`) coloring to `r4` where the
+ROM has `sb`, everything else byte-identical - and declared it settled after
+10 rounds and 12+ techniques, all against the WRONG (truncated) target. Redone
+against the corrected `0x1f4`: the diff is NOT pure coloring. Reading the two
+full linear disassemblies side by side (the same method that closed
+`FUN_022d5a64` - block-summary diffs hide this kind of thing) shows target
+keeps `mask` resident in `fp` for the ENTIRE function (used every loop
+iteration, the hot path: `entry[3] &= mask; entry[5] &= mask;`) while
+`typeFlagBase` is computed once and spilled to a stack slot, reloaded on
+demand (used only inside the colder "notify" branch). The current best
+candidate (`v13`) has this the other way around: `typeFlagBase` occupies `fp`
+and `mask` is the one spilled and reloaded twice. This is a REGISTER-PRIORITY
+inversion, not a pure coloring permutation - the allocator is picking the
+colder value to keep resident.
+
+Tried to fix the priority the direct ways: narrowing `typeFlagBase`'s
+declaration scope to just the `notify` block (per sm64ds lever 6y-2, shallower
+scope should rank lower) - it got WORSE, `typeFlagBase` grabbed `fp` even
+more directly, contradicting 6y-2's stated direction on this compiler build;
+widening/narrowing `mask`'s type (`unsigned int`, `unsigned short`) - the
+`unsigned short` form incidentally reaches the exact correct SIZE (124 insns,
+0x1f4 bytes) but not the correct coloring, still spills `mask`; a
+zero-instruction self-select priority booster on `mask` (`x = cond?x:x`, per
+6y-1) - no effect at all, byte-identical to baseline. None reproduced target's
+actual allocation. Recorded as three more ruled-out techniques on what should
+now be treated as a REOPENED problem with a precisely-identified mechanism
+(mask-vs-typeFlagBase priority), not the closed pure-coloring wall the notes
+previously described - the next person to pick this up should start from "why
+does mask lose to typeFlagBase" rather than re-running the general coloring
+playbook from scratch.
+
+## 3o. SETTLED: the toolchain is `2.0/*`, project-wide. `CANONICAL` changed.
+
+**Read this before running any version sweep.** `tools/match.py`'s `CANONICAL`
+is now `2.0/base` and `PINNED` is the `2.0/*` family. Sections 2, 3a-3n above
+were all written against `dsi/*` and their version-specific conclusions
+(including "`dsi/1.1` gives a 4-byte win", section 3e) are only meaningful
+relative to a pin that has since been shown wrong.
+
+**The reasoning error worth not repeating.** When `FUN_022d5a64` matched
+byte-exactly on `2.0/*` and on nothing else (3m), I recorded it as a
+per-function "outlier" and went back to `dsi/*` for the neighbouring
+functions (3n). That is not a coherent position: **a single ROM is built by
+ONE toolchain.** Ranking families by aligned-diff block count on drafts that
+had been hand-tuned against `dsi/*` for several rounds is not evidence; a
+byte-exact match that the other family is structurally incapable of
+reproducing is. When those two disagree, the byte-exact match wins, and the
+right response is to re-home the project - not to invent a story about mixed
+toolchains or per-TU compilers.
+
+**The evidence, gathered by recompiling the entire banked corpus under both
+families.** 156 functions compile byte-identically under both and discriminate
+nothing (they are too simple to tell the families apart - which is also why
+the original `dsi/1.3` pin's "confirmation", a trivial byte-store setter,
+confirmed nothing). Exactly four discriminate:
+
+| function | `dsi/*` | `2.0/*` | note |
+|---|---|---|---|
+| `FUN_022ce658` | no | **yes** | structurally wrong under `dsi/*` |
+| `FUN_022d3bd4` | no | **yes** | structurally wrong under `dsi/*` |
+| `FUN_022d5a64` | no | **yes** | `dsi/*` cannot emit its frame shape at all |
+| `FUN_022ce5b4` | yes | **yes** | after `#pragma opt_strength_reduction off` |
+
+Net effect of the switch, measured: **156 match under both, 3 match under
+`2.0/*` only, 0 match under `dsi/*` only.** A strict improvement with no
+regressions.
+
+`FUN_022ce5b4` deserves its own note because it is the shape of thing that
+*looks* like counter-evidence and isn't. As first banked it matched `dsi/*`
+and not `2.0/*`, because `2.0/*` strength-reduces its `for (i...) sum +=
+G[K+i]` loop into a pointer induction variable while the ROM re-derives
+`base + i` every iteration and keeps `i` as its own counter.
+`#pragma opt_strength_reduction off` reproduces the ROM shape exactly (this
+pragma is one of the few mwccarm genuinely honours - sm64ds 6e), and the
+banked file now carries it with a comment. Four natural loop rewrites
+(unsigned index, `while` form, explicit pointer arithmetic, named byte temp)
+were tried first; none defeat the reduction. **One function preferring the
+other family is not proof of a mixed toolchain - check for an optimisation
+pragma explanation first.**
+
+Also fixed while here: `2.0/sp1p5`, `2.0/sp1p6` and `2.0/sp1p7` were missing
+from `SWEEP` entirely and had never been tested by any sweep in this
+project's history. They are included now. All ten `2.0/*` builds behave
+identically on every discriminating function, so the family is pinned but the
+point release is not; `2.0/base` is the representative.
+
+**What this invalidates, and what to redo.** Every "no version helps" and
+"this is a compiler floor" verdict recorded in sections 2, 3a-3n was reached
+with `dsi/*` as the working compiler, so any of them may be an artifact.
+`FUN_022d5540` and `FUN_022d5870` in particular still carry `dsi`-era
+hand-tuning (`FUN_022d5540_BEST.c` has two pragmas added specifically to
+compensate for `dsi/*` behaviour) and should be re-derived from a clean base
+under `2.0/*` rather than re-measured as-is.
 
 ## 4. Where to look next
 
