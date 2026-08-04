@@ -1503,6 +1503,140 @@ missing version - the search has been done. Also fixed a stale claim in
 machine; re-verified, it launches fine now and has been contributing real
 (not silently-failed) data to every `--all` sweep this session.
 
+## 3l. Bisected `FUN_022d5540`'s remaining 4 bytes to an exact instruction and
+statement-order cause - a real trade-off, not a fix
+
+Went looking for the exact source of the round-3j candidate's one extra word
+rather than guessing at macro respellings again. Disassembled the compiled
+candidate directly (capstone) and computed the absolute target of every
+`ldr rX, [pc, #N]` pool load, rather than reading the diff by eye:
+
+```
+0x0008  ldr r2, [pc, #0x314]  -> pool@0x0324   (G_023190dc, a real reloc)
+0x009c  ldr r0, [pc, #0x284]  -> pool@0x0328   (the extra word)
+0x02b8  ldr r0, [pc, #0x68]   -> pool@0x0328   (same slot, second reference)
+```
+
+Only ONE extra pool word exists (not two, as the earlier "duplicate" framing
+implied) - `0x9c` and `0x2b8` both correctly SHARE a single `0xFFFF`
+(`QSENTINEL`) slot. The `0x2b8` reference is legitimate: target has the exact
+same pool load at the matching offset, for the matching comparison (the
+`conn+0x600+0xfa` sentinel check near the end). The `0x9c` reference is the
+real problem - it sits inside `firstKept = QSENTINEL; prevIdx = QSENTINEL;`
+at the top of the do-while loop, a region target's own disassembly has NO
+form of at all (this whole block is a pure `insert`, absent from target).
+
+**Reordering the two statements (`prevIdx` first, `firstKept` second, or
+equivalently deriving one from the other: `prevIdx = QSENTINEL; firstKept =
+prevIdx;`) removes the pool word entirely** - confirmed both ways give
+byte-identical results (0x324). But this isn't a fix: real-instruction count
+drops from 202 (matching target) to 200, and `fdiff --align` shows the two
+"missing" instructions land in two other spots - one is the SAME `cond-opt`
+predication floor already confirmed structural in round 3i/6u (the
+`(entry[1]&8)==0 && entry[9]==0` guard, which apparently interacts with
+available-register pressure from this specific spot even though its own
+source phrasing is proven unfixable), the other a redundant `mov r1,#0`
+near the final unlock call that the reordering's freed-up register makes
+mwcc fold away. **Net: 0x324 (4 bytes UNDER target) instead of 0x32c (4
+bytes over)** - trading one known-shaped gap for a different, not-obviously-
+better one. The original statement order (`firstKept` then `prevIdx`,
+already in `scratch/FUN_022d5540_BEST.c`) remains the best candidate; this
+reordering is not an improvement, just a different floor.
+
+**What this bisection actually establishes**: the extra pool word is
+directly, causally tied to `firstKept`/`prevIdx` statement order at this one
+spot - not a vague "instruction selection, no lever" floor as originally
+suspected in round 3j. There IS a lever; it just spends its win somewhere
+this project doesn't want to spend it. Anyone picking this back up should
+look for a THIRD way to write this reset (not tried: an explicit temp
+holding the sentinel value shared via a form that doesn't trigger either
+side effect, or attacking the downstream predication/mov cost directly so
+the reordered version's savings elsewhere don't need to be given back).
+
+## 3m. `FUN_022d5a64` **MATCHED** (2026-08-04) - and both blockers were wrong
+premises, not codegen floors
+
+`FUN_022d5a64` is byte-exact on **all seven `2.0/*` builds**
+(`src/arm7/FUN_022d5a64.c`, banked). Two long-standing "floors" recorded in
+sections 3/3a turned out to be artifacts of wrong inputs, which is worth
+stating plainly because both cost multiple sessions:
+
+**Wrong premise 1: the target size was truncated.** Ghidra's cached size is
+0x1fc, which stops at the final `bx lr` and excludes this function's own two
+literal-pool words (0x022d5c60 = `&G_023190dc`, 0x022d5c64 = `0xffff`); the
+next function starts at 0x022d5c68, so the true size is **0x204**. Every
+candidate was therefore being compared against a target missing its last two
+words, which is precisely where the phantom "target has 127 real instructions,
+candidate has 126" came from. That one-instruction gap was recorded across
+several rounds as a `cur`-vs-`index` register-allocation floor. **It was never
+a floor; it was a measurement error.** `tools/funcs.py` already knows the next
+function's address - `next_addr - this_addr` is the honest bound, and checking
+it takes one command. (Same class as the two instances already in
+tooling.md's "Ghidra's function size can exclude a trailing literal pool",
+and as sm64ds-decomp's own 6z "truncated-target tooling bug that hides a TRUE
+match".)
+
+**Wrong premise 2: the compiler family.** This function does NOT come from the
+`dsi/*` line this project pins as canonical - it matches the **`2.0/*`**
+family and only that family (all 7 builds; `dsi/*`, `1.2/*` and `2004/b56` all
+diverge). The decisive tell was the frame form: `dsi/*` converts a 12-byte
+local area into three scratch pushes (`push {r1,r2,r3,r4-fp,lr}`, no `sub sp`,
+which is one instruction cheaper in the epilogue and so preferred under
+`-O4,s`), while the ROM uses `push {r4-fp,lr}` + `sub sp,#0xc`. No source
+phrasing, pragma, `-O` level or `-proc` value flipped that under `dsi/*`;
+switching family flipped it immediately and took the diff from 15 blocks to 6.
+**Sweep the family before declaring a frame-shape floor** - section 3k
+established that no compiler build is *missing* from this repo, but it did not
+establish that every function comes from the same one, and this one doesn't.
+Whether other arm7 functions are also `2.0/*` is now an open and high-value
+question for the rest of the module.
+
+**The source-level levers that closed the remaining gap**, in the order they
+paid off (all verified individually, several only worked in combination -
+found with the new `tools/csweep.py`, see tooling.md):
+
+1. **`first == 1` explicit flag** instead of `cur == chunk` to detect the
+   first iteration - the banked polarity finding from 3a, finally on a
+   foundation that could use it. Target predicates the whole prologue block
+   (`cmp r0,#1` / `addeq` / `ldrne` / `streq` / `strne`).
+2. **`consumed` must NOT be `volatile`.** It was, which cost two extra stack
+   slots (`sub sp,#0x14` where the target has `#0xc`) and pinned the frame
+   into the wrong shape.
+3. **`chunkLen`'s zero-test is on the SHIFTED value**, not on `hdr & 0xff`:
+   `chunkLen = ((unsigned int)hdr << 24) >> 23; if (chunkLen == 0) ...`
+   reproduces `lsl #0x18` + `lsrs #0x17` + `moveq`; testing `(hdr & 0xff)`
+   emits `ands` instead.
+4. **`unsigned short index` parameter, not `unsigned int`.** As a `u32`,
+   `pkt[9] = index` creates a narrowing node that mwcc CSE-hoists out of the
+   loop into its own spill slot (`lsl/lsr #0x10` + a stack word). As a `u16`
+   there is no conversion and the value stays in `sl` for a bare `strh` -
+   which is exactly the "`index` won the register" half of the supposed
+   `cur`-vs-`index` competition.
+5. **`val` is 32-bit, not `unsigned short`.** Target does `lsl r7,r7,#1` with
+   no truncation and masks only the later difference; a `u16 val` makes mwcc
+   fuse a narrower shift/sub pair and emit one instruction more.
+6. **`typeFlagBase` computed AFTER the guard block.** Writing
+   `conn + 0x100 + 0x88` inline in the guard condition and assigning
+   `typeFlagBase = conn + 0x100;` only after the early-return lets CSE place
+   the single `add` at first use (target's 0x034) instead of hoisting it above
+   the length checks. This alone took the diff from 6 blocks to 1.
+7. **Declaration order sets callee-saved colors** (sm64ds 6k, confirmed here
+   verbatim). The last residual was a pure two-pair permutation - `conn`/
+   `typeFlagBase` on r4/r5 and `chunkLen`/`slot` on r6/r8, then `val`/
+   `chunkLen` on r6/r7. Swapping each pair's declaration order swapped its
+   registers, deterministically, one pair per attempt, to zero.
+
+A struct wrapper for the three memory-resident locals
+(`struct { u16 *cur; u16 *pktSrc; int first; } L;`) also helped (17 -> 15
+blocks) and is retained in the banked source; mwcc scalarizes it, so it is not
+load-bearing for the frame, but it did improve slot ordering.
+
+**Method note.** The whole close-out came from reading a full linear
+disassembly of the candidate side by side with the target and naming every
+difference concretely, rather than reasoning from `fdiff` block summaries. Two
+of the seven levers above (the `index` width and the `typeFlagBase` sink) were
+invisible in the block view and obvious in the linear view.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's

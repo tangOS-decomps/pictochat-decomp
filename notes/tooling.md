@@ -694,6 +694,19 @@ that boundary showed the exact same alignment-NOP + pool-word pattern an
 isolated single-function compile of the same source produces, confirming
 the real function is 56 bytes (0x38), not 46 (0x2e).
 
+`FUN_022d5a64` hit it a third time (2026-08-04) and is the most expensive
+instance so far, because it did NOT present as "candidate too long" - it
+presented as a *structural* mismatch that survived multiple sessions of
+investigation. Ghidra said 0x1fc; the two words at 0x022d5c60 (`&G_023190dc`)
+and 0x022d5c64 (`0xffff`) are this function's own pool, and the next function
+starts at 0x022d5c68, so the true size is 0x204. Because the pool was excluded,
+the target appeared to have 127 instructions where every candidate had 126, and
+that phantom "one instruction short" was recorded across several rounds as a
+register-allocation floor (see mwccarm-codegen.md 3m). **Cross-check the
+declared size against the NEXT function's start address before concluding
+anything about a residual**: `next_addr - this_addr` is the honest upper bound,
+and `tools/funcs.py` already has both.
+
 If a candidate is consistently N bytes *too long* and every instruction up
 to the target's declared end already matches, don't assume the source is
 wrong - check `tools/disasm.py --addr <target_end> --length 0x10` first.
@@ -816,6 +829,50 @@ come up again, two mwccarm inline-asm gotchas are worth knowing up front:
   operand" errors. Pass `--flags "..."` explicitly (copy `DEFAULT_FLAGS`
   from `tools/match.py` verbatim, keeping `-thumb`) to override the
   heuristic for this case.
+
+## tools/csweep.py - sweep COMBINATIONS of source edits, not one at a time
+
+Added 2026-08-04, while closing `FUN_022d5a64`. Hand-testing one C phrasing per
+compile is the slow part of a near-miss: each lever (a `volatile`, a cast, a
+declaration order, a pragma) is cheap alone, but the ones that matter usually
+only pay off in COMBINATION - `FUN_022d5540`'s best candidate needed two pragmas
+that were each individually a regression (mwccarm-codegen.md round 3j), and
+`FUN_022d5a64`'s match needed five independent changes at once. `csweep.py` runs
+the cartesian product and ranks the results.
+
+A sweep is a JSON spec naming a base file, the target coordinates, and a list of
+independent `axes`; each axis replaces an `anchor` string with one of several
+`options`:
+
+```json
+{ "base": "scratch/draft.c", "func": "FUN_022d5a64", "addr": "0x022d5a64",
+  "size": "0x204", "module": "arm7", "version": "2.0/base",
+  "axes": [ {"name": "first", "anchor": "    int first;",
+             "options": {"plain": "    int first;",
+                         "vol":   "    volatile int first;"}} ] }
+```
+
+```
+python tools/csweep.py sweep.json --top 10 --keep-dir scratch/_sweep
+```
+
+Each candidate is scored through the same oracles as everything else
+(`match.py` to compile, `fdiff.py --align` to score) and reported as
+`insn±N blocks=N size±N`, ranked best-first; a byte-exact hit stops the run and
+prints the file. Two deliberate design points:
+
+- **Anchors must occur EXACTLY once** in the base, checked up front. A typo'd
+  anchor that silently matches nothing would make every combination compile the
+  identical base and report a uniform (meaningless) result - the same class of
+  self-inflicted bug that cost a full round earlier in this project's history
+  (see mwccarm-codegen.md's "false lead" note on a sweep whose string
+  replacement silently failed).
+- **`blocks` is the shape metric, not size.** It comes from `fdiff --align`,
+  which collapses pure register-coloring differences, so a falling block count
+  means the STRUCTURE is converging even while byte size stands still. On
+  `FUN_022d5a64` the last stretch went 27 -> 25 -> 21 -> 17 -> 15 -> 6 -> 1
+  blocks with the size barely moving; ranking on size alone would have hidden
+  that progress.
 
 ## tools/nonmatching.py
 
