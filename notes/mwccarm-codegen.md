@@ -1303,6 +1303,65 @@ and both are already applied in the current best candidates. Further
 progress here most likely requires either the unread `sm64ds-decomp` notes
 sections (section 4) or accepting these three as a documented floor for now.
 
+**Correction (round 3h, immediately below): "exhausted" above was about the
+CLI `-opt` surface specifically. `#pragma opt_*` directives are a distinct
+mechanism this round didn't test and turned out to matter.**
+
+## 3h. `#pragma opt_*` is a genuinely different lever from `-opt` on the CLI -
+found via sm64ds-decomp's notes, real movement on `FUN_022d5540`, no match
+
+Read `sm64ds-decomp/notes/mwccarm-codegen.md` sections 6c/6d/6e/6f/6g (not
+previously consulted by this project) per the "where to look next" pointer.
+Section 6f is explicit and, per this project's round 3g, easy to miss: the
+CLI `-opt nocse`/`-opt noloopinvariants`/etc. tested in round 3g are inert
+because they're "superceded by `-opt level=xxx`" (mwccarm's own words) - but
+`#pragma opt_common_subs off`, `#pragma opt_propagation off`, and
+`#pragma opt_strength_reduction off`, written INTO the C source above the
+function, are a separate code path the compiler actually honors, confirmed
+live (not silently accepted-and-ignored) on sm64ds's own corpus and
+independently re-confirmed here.
+
+Swept all 5 documented-live pragmas (`opt_common_subs`, `opt_propagation`,
+`opt_strength_reduction`, plus `opt_dead_assignments`/`opt_lifetimes` for
+completeness) against all three hard residuals:
+
+- **`#pragma opt_common_subs off` genuinely changes `FUN_022d5540`'s
+  codegen**: 0x334 vs the round-3e baseline's 0x33c (dsi/1.1) - 8 bytes
+  closer, the best raw byte count reached this session. But it's a mixed
+  result, not an unambiguous win: the previously-EXACT 9-register push
+  (`r4,r5,r6,r7,r8,sb,sl,fp,lr`, matching target since the very first draft
+  in section 3b) breaks under this pragma - the candidate pulls in `r3` as
+  an extra register (`r3,r4,r5,r6,r7,r8,sb,sl,fp,lr`, 10 total), apparently
+  needed as an alignment/scratch pad once CSE stops sharing an address
+  computation the original coloring relied on. Whole diff shape changes
+  extensively (44 vs 42 non-equal blocks) - this is a different local
+  optimum, not a strict improvement on the 3e/3f baseline's two identified
+  mechanisms.
+- **Tried to scope the pragma to avoid the register-set regression** (CW
+  pragmas support `#pragma opt_common_subs reset` to re-enable, so a source
+  file can toggle a region rather than the whole function). Scoped it two
+  ways - only around the outer 4-queue loop, and only around the pre-loop
+  prelude (isType9/mask setup) - and **both scopings collapse the result
+  back to the exact 0x33c baseline, losing the win entirely**. The effect
+  only appears when the pragma covers the WHOLE function; it isn't
+  attributable to one isolable region, so there's no way found yet to get
+  the size win without also inheriting the r3 regression.
+- Stacking `opt_propagation`/`opt_strength_reduction`/`opt_dead_assignments`/
+  `opt_lifetimes` off on top of `opt_common_subs off` adds nothing further -
+  still exactly 0x334, `opt_common_subs` is doing all the work here.
+- `FUN_022d5870`: `opt_propagation off` makes it slightly WORSE (0x1f4 vs
+  0x1f0 baseline); `opt_common_subs off` is neutral (0x1f0, unchanged).
+- `FUN_022d5a64`: no pragma tested changed anything - still the same known
+  126-vs-127-real-instruction near-miss from section 3a.
+
+**Not banked as the new best** - a smaller total byte count with a wrong
+register set isn't closer to a match in any sense `tools/match.py` cares
+about, and every attempt to keep the win while fixing the r3 regression
+(scoping) failed outright. Recorded here as real, verified, transferable
+knowledge for the next person who reaches for `-opt` flags and finds them
+inert per round 3g: try the `#pragma opt_*` form before concluding the whole
+optimizer-toggle avenue is dead.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
