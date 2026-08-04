@@ -167,7 +167,15 @@ def setup_dir(f, base_src, out=None):
     m = L.MARKER_RE.search(base_src[:400])
     name = m.group(3) if m else f["name"]
     tgt = F.target_bytes(f)
-    flags = T.flags_for(module, mode)
+    # flags_for() only applies module+arm/thumb defaults - it never reads the
+    # seed's own `// flags: ...` marker (e.g. `-O4,s` opt-level overrides),
+    # unlike match.py/fdiff.py which both apply it via apply_flags_marker().
+    # Without this, any seed that needs a non-default opt level (every hard
+    # function iterated on this session) silently gets imported at -O4,p -
+    # a real, different compiler configuration, not just a cosmetic gap -
+    # invalidating whatever the permuter subsequently searches. Apply the
+    # same marker logic here so the permuter tests the actual seed's flags.
+    flags = M.apply_flags_marker(T.flags_for(module, mode), base_src, allow_thumb_heuristic=False)
 
     out = pathlib.Path(out) if out else (PERM_DIR / "work" / name)
     out.mkdir(parents=True, exist_ok=True)
