@@ -60,8 +60,9 @@ DEFAULT_FLAGS = "-O4,p -enum int -lang c99 -char signed -interworking -thumb -pr
 DEFAULT_FLAGS_ARM7 = "-O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm7tdmi -gccext,on -msgstyle gcc"
 DSI_SWEEP = ["dsi/1.1", "dsi/1.1p1", "dsi/1.2", "dsi/1.2p1", "dsi/1.2p2",
              "dsi/1.3", "dsi/1.3p1", "dsi/1.6sp1", "dsi/1.6sp2"]
-NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4",
-             "2.0/base", "2.0/sp1", "2.0/sp1p2", "2.0/sp2", "2.0/sp2p2", "2.0/sp2p3", "2.0/sp2p4"]
+CW20_SWEEP = ["2.0/base", "2.0/sp1", "2.0/sp1p2", "2.0/sp1p5", "2.0/sp1p6",
+              "2.0/sp1p7", "2.0/sp2", "2.0/sp2p2", "2.0/sp2p3", "2.0/sp2p4"]
+NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4"] + CW20_SWEEP
 # Recovered via tools/recover_cw2004.py (see sm64ds-decomp notes/mwccarm-codegen.md
 # 6ai) - a genuinely different, older compiler core than the 1.2/2.0 line above,
 # not just different flags. Not this title's canonical build (PictoChat is DSi-era,
@@ -70,14 +71,33 @@ NTR_SWEEP = ["1.2/base", "1.2/sp2", "1.2/sp2p3", "1.2/sp3", "1.2/sp4",
 # line cannot from any source phrasing.
 CW2004_SWEEP = ["2004/b56"]
 SWEEP = DSI_SWEEP + NTR_SWEEP + CW2004_SWEEP
-PINNED = DSI_SWEEP  # until a real match narrows it down further
-# All dsi/ builds launch and self-report as "Freescale C/C++ for Embedded ARM"
-# (Metrowerks' CodeWarrior division was acquired by Freescale in 2005).
-# dsi/1.1 is copyright 2007; dsi/1.2 through dsi/1.6sp2 are copyright 2009.
-# The DSi launched Nov 2008 (Japan) / Apr 2009 (Americas/Europe), so a 2009
-# build fits a launch-window system title like PictoChat better than the 2007
-# one. Still just a starting guess - not yet verified by any real match.
-CANONICAL = "dsi/1.3"
+PINNED = CW20_SWEEP
+
+# ---------------------------------------------------------------------------
+# THE TOOLCHAIN IS 2.0/*, NOT dsi/*  (settled 2026-08-04 - do not re-litigate
+# without new byte evidence; see notes/setup-mwccarm.md for the full record)
+#
+# The dsi/* pin that stood here until now was never verified by a match - it
+# was a plausibility argument from build dates (PictoChat is a DSi title, so a
+# DSi-era compiler "must" have built it). That reasoning is wrong: a single ROM
+# is built by ONE toolchain, so the question is settled by byte evidence, not
+# by which product name looks apt.
+#
+# Evidence. Of the whole banked corpus, exactly four functions DISCRIMINATE
+# between the two families (everything else compiles byte-identically under
+# both, so it votes for neither):
+#     FUN_022ce658   matches 2.0/* only - structurally wrong under dsi/*
+#     FUN_022d3bd4   matches 2.0/* only - structurally wrong under dsi/*
+#     FUN_022d5a64   matches 2.0/* only - dsi/* cannot emit its frame shape
+#     FUN_022ce5b4   matched dsi/* as first written, but ALSO matches 2.0/*
+#                    once `#pragma opt_strength_reduction off` stops 2.0 from
+#                    turning its loop index into a pointer induction variable
+# So 2.0/* explains all four; dsi/* explains one and is structurally incapable
+# of three. All ten 2.0/* builds behave identically on every discriminating
+# function, so the family is pinned but the point release is not - 2.0/base is
+# chosen as the representative.
+# ---------------------------------------------------------------------------
+CANONICAL = "2.0/base"
 
 md = Cs(CS_ARCH_ARM, CS_MODE_ARM)
 

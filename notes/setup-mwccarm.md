@@ -16,37 +16,70 @@ tools/mwccarm/2004/b56/mwccarm.exe   # experimental, archive.org-recovered - see
 tools/mwccarm/license.dat
 ```
 
-Verified working: `1.2/sp2p3` launches cleanly and reports
-`Metrowerks C/C++ for Embedded ARM ... Version 2.0 build 82` under the
-project's `license.dat`. This is the version `sm64ds-decomp` settled on as
-canonical for Super Mario 64 DS (byte-identical to `1.2/base` and `1.2/sp2`
-across their whole probe corpus) - **but PictoChat is a DSi system title, not
-a 2004 NTR-SDK game, so that pin almost certainly does not apply here.**
+## THE TOOLCHAIN IS `2.0/*` (settled 2026-08-04 by byte evidence)
 
-The `tools/mwccarm/dsi/` builds are the real starting hypothesis. All launch
-cleanly and self-identify as **"Freescale C/C++ for Embedded ARM"**
-(Metrowerks' CodeWarrior division was acquired by Freescale in 2005):
+`tools/match.py`'s `CANONICAL` is **`2.0/base`**, and `PINNED` is the
+`2.0/*` family. **Do not "fix" this back to `dsi/*`.** If you are here
+because a candidate won't match under `2.0/*`, sweep `--all` and read the
+evidence below before concluding the pin is wrong.
 
-| version    | copyright |
-|------------|-----------|
-| `dsi/1.1`  | 2007      |
-| `dsi/1.2`  | 2009      |
-| `dsi/1.3`  | 2009      |
-| `dsi/1.6sp1` | 2009    |
-| `dsi/1.6sp2` | 2009    |
+### Why this was previously (wrongly) pinned to `dsi/*`
 
-The DSi launched November 2008 (Japan) / April 2009 (Americas/Europe), so a
-2009-dated build fits a launch-window built-in title like PictoChat better
-than the 2007 one - `tools/match.py`'s `CANONICAL` defaults to `dsi/1.3` on
-that basis.
+The old pin was a *plausibility argument*, never a verified one: PictoChat is
+a DSi system title, the `dsi/*` builds are DSi-era and self-identify as
+"Freescale C/C++ for Embedded ARM" (Metrowerks' CodeWarrior division was
+acquired by Freescale in 2005), the DSi launched Nov 2008 / Apr 2009, so a
+2009-dated `dsi/1.3` "must" be it. The supporting "confirmation" was a trivial
+byte-store setter that matched on `dsi/1.3` - a function so simple it compiles
+identically on *every* vendored build, so it confirmed nothing.
 
-**Confirmed**, not just a guess: the first real match
-(`src/arm7/FUN_022c8268.c`, a trivial byte-store setter) landed byte-identical
-on `dsi/1.3` with the default flags. That's one data point, not a full pin -
-keep sweeping (`tools/match.py --all` or `--trio`) as more functions get
-matched, in case a nearby service pack turns out to be the more precise
-version for most of the codebase - but `dsi/1.3` is a real, working starting
-point now, not just a hypothesis.
+That reasoning is invalid regardless of how apt the product name looks: **a
+single ROM is built by ONE toolchain.** The question is settled by byte
+evidence, not by which compiler was marketed for which console. Chasing a
+per-function "this one used a different compiler" explanation is a sign of
+rationalising a result rather than following it.
+
+### The evidence
+
+Of the entire banked corpus, exactly **four** functions discriminate between
+the families. Everything else (156 functions) compiles byte-identically under
+both and therefore votes for neither:
+
+| function | `dsi/*` | `2.0/*` | note |
+|---|---|---|---|
+| `FUN_022ce658` | no | **yes** | structurally wrong under `dsi/*` |
+| `FUN_022d3bd4` | no | **yes** | structurally wrong under `dsi/*` |
+| `FUN_022d5a64` | no | **yes** | `dsi/*` cannot emit its frame shape at all |
+| `FUN_022ce5b4` | yes | **yes** | needs `#pragma opt_strength_reduction off` under `2.0/*` |
+
+`2.0/*` explains all four. `dsi/*` explains one and is *structurally
+incapable* of three. Switching the pin is a strict improvement, verified by
+recompiling the whole corpus both ways: **156 match under both, 3 match under
+`2.0/*` only, 0 match under `dsi/*` only.** Nothing regressed.
+
+`FUN_022ce5b4` is the one that superficially looked like counter-evidence: as
+originally written it matched `dsi/*` and not `2.0/*`. The cause is that
+`2.0/*` strength-reduces its loop index into a pointer induction variable
+while the ROM re-derives `base + i` each iteration. `#pragma
+opt_strength_reduction off` (one of the few pragmas mwccarm honours - see
+`notes/mwccarm-codegen.md` and sm64ds-decomp 6e) reproduces the ROM shape, and
+the file now carries it. Four natural loop rewrites were tried first and none
+defeat the reduction. **A single function appearing to prefer the other family
+is not evidence of a mixed toolchain - check whether an optimisation pragma
+explains it first.**
+
+All ten `2.0/*` builds behave identically on every discriminating function, so
+the *family* is pinned but the point release is not; `2.0/base` is the
+representative. (`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP`
+entirely until 2026-08-04 and had never been tested - they are included now.)
+
+### The older `1.2/*` line
+
+`1.2/sp2p3` launches cleanly and reports `Metrowerks C/C++ for Embedded ARM
+... Version 2.0 build 82`. This is the version `sm64ds-decomp` settled on as
+canonical for Super Mario 64 DS. It is **not** this project's pin - the `1.2`
+line is structurally wrong on this ROM's discriminating functions - but it is
+kept in `--all` sweeps because it costs nothing.
 
 One flag correction the first match surfaced: **`-thumb` is required.**
 Without it, `mwccarm` defaults to ARM-mode output even for tiny functions the
