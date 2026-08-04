@@ -1362,6 +1362,58 @@ knowledge for the next person who reaches for `-opt` flags and finds them
 inert per round 3g: try the `#pragma opt_*` form before concluding the whole
 optimizer-toggle avenue is dead.
 
+## 3i. Read sm64ds-decomp 6u/6w/6y - explains round 3f, two more levers tried on
+the `prevIdx`/`firstKept` competition, both negative
+
+**6u explains round 3f's predication dead-end precisely, and confirms it was
+correctly unfixable from source.** sm64ds's own hard-won rule: mwccarm's
+backend cond-opt (the pass that decides predicate-vs-branch) runs on
+**post-RA physical code** and "refuses to predicate a block that has >= 2 CFG
+predecessors" - and separately, "no pragma reaches it" (they dumped and swept
+the full pragma table specifically against this pass and found every one
+inert, unlike the `opt_common_subs`/`opt_propagation` pragmas that DO reach
+earlier passes per round 3h). Since this is a post-RA, IR-blind decision,
+every family of source-level rewrite (u64-launders, volatile, bitwise-vs-
+logical AND, nesting) is inert against it by construction - exactly what
+round 3f found empirically (three rewrites, byte-identical output) without
+knowing why. No new action here, but it upgrades round 3f from "an empirical
+dead end" to "a confirmed structural floor, matching an independently-derived
+rule from a different codebase's compiler investigation" - stop looking for a
+source-level fix to this specific block.
+
+**Two more `prevIdx`/`firstKept` register-competition levers tried, from 6y,
+neither with better luck than the earlier round's dozen:**
+
+- **Lever 6y-2, declaration SCOPE DEPTH** (distinct from mere declaration
+  ORDER, which was already tried and failed): sm64ds found moving a value's
+  decl to a shallower/deeper C block (not just reordering siblings at the
+  same scope) can retarget its register rank on its own compiler build.
+  Tried three variants on `FUN_022d5540`: `prevIdx`+`firstKept` both moved
+  from function-top to the do-while body's top (their natural reset point,
+  one block deeper); each moved independently with the other left at
+  function-top. **All three compile byte-identical to the unmodified
+  baseline (0x33c)** - this compiler build's allocator is provably
+  insensitive to scope depth for this specific pair, at least at the two
+  depths reachable without restructuring the loop itself.
+- **Lever 6y-1, zero-instruction self-select priority booster**
+  (`x = cond ? x : x;`, already ruled out on `FUN_022d5870`'s `conn` per
+  section 2 - tried here for the first time on `prevIdx`/`firstKept`/`cur`
+  specifically). Turned out NOT to be zero-instruction on this build: using
+  a freshly-computed condition (`cur != QSENTINEL`, not something already
+  live at that program point) forced a real extra comparison, making things
+  *worse* (`prevIdx` 0x340, `firstKept` 0x344 - both regressions vs the
+  0x33c baseline; `cur` was neutral at 0x33c). sm64ds's own writeup doesn't
+  say what made their `w` free (likely an already-live parameter flag at
+  that exact point) - this project's three attempted conditions apparently
+  weren't cheap enough to fold away. Worth retrying if a genuinely-free,
+  already-live boolean is ever found near `prevIdx`'s or `firstKept`'s
+  assignment sites, but plain "reuse the nearest sentinel comparison" is not
+  automatically free here.
+
+`FUN_022d5540`'s two structural mechanisms and the round-3h `#pragma
+opt_common_subs off` trade-off remain the complete, unchanged state of this
+function after this round.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
