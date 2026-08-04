@@ -1198,6 +1198,49 @@ for any future hard-residual work on this project: don't assume the pinned
 (9 versions x one `match.py` invocation each), before concluding a residual is
 version-independent.
 
+**Round 3f - searched the full `dsi/1.1` diff for more instances of the same
+"CSE ate a redundant reload" pattern; found a different-shaped difference
+instead (predication polarity), confirmed it's not independently fixable from
+source.** Generated the complete `--align --align-max-blocks 0` diff of
+`FUN_022d5540_BEST.c` against target under the new `dsi/1.1` baseline (42
+non-equal blocks) and read through it end to end. Most blocks are either
+register-coloring noise or the already-documented `queueHeadBase`/
+`typeFlagBase` LICM+spill block (visibly the single largest block in the
+diff, `target[37:37]` vs `candidate[37:49]` - target hoists these two
+pointers once before the loop and keeps them live across all 4 iterations;
+candidate, in the freelistBase-inlined shape, recomputes them from spilled
+stack slots every iteration). No second "redundant reload" spot was found.
+
+One new-shaped block did stand out: the `(entry[1] & 8) == 0 && entry[9] ==
+0` short-circuit (`if (...) goto notify;`, guarding the "already queued,
+nothing to do" fast path) compiles on target as a 6-instruction predicated
+sequence (`ldrh`; `tst r0,#8`; `ldrheq`+`cmpeq`+`beq` - the second half of
+the condition executes under condition code rather than behind a branch),
+but on the candidate as a 7-instruction branchy sequence (`ldrh`; `tst`;
+`bne`; `ldrh`; `cmp`; `beq`) - one extra instruction, a real byte-for-byte
+difference, not just coloring. This has the same shape as the `first == 1`
+predication-polarity fix banked for `FUN_022d5a64` (section 3a) - a plausible
+new lever. Tested it: rewrote the condition three ways (`(a==0) &
+(b==0)` bitwise-AND instead of `&&`, to remove short-circuit semantics
+entirely; nested `if (a==0) { if (b==0) goto notify; }`; and the original
+`&&`) - **all three produced byte-identical machine code**, confirmed via
+direct hex-dump diff of the `tst r0,#8` region, not just matching total size.
+Unlike `FUN_022d5a64`'s `first == 1` fix (a real, source-visible comparison
+polarity), this one doesn't respond to any source-level restructuring -
+mwcc's if-converter is making the branch-vs-predicate call here based on
+something outside the condition's own syntax (most likely the same
+register/scheduling pressure behind the `prevIdx`/`firstKept` competition
+wall, given its proximity in the loop body), not a fixable idiom mismatch.
+Recorded as a negative result rather than silently dropped, per this file's
+purpose as a record of what's actually been ruled out.
+
+No further progress this round. `FUN_022d5540`'s remaining 20-byte gap under
+`dsi/1.1` is now attributable entirely to the two already-identified
+structural mechanisms (LICM+spill, `prevIdx`/`firstKept` register
+competition) plus this newly-confirmed-unfixable predication difference -
+three symptoms, all consistent with a single underlying register-allocation/
+scheduling floor rather than three separate bugs to chase independently.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
