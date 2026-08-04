@@ -1478,6 +1478,31 @@ session) but is not actually closer in content - still the same known
 padded to the same total byte count. Not a new lever for that function,
 noted for completeness.
 
+## 3k. Is the vendored compiler-build set actually complete? Checked directly - yes
+
+Asked directly (2026-08-04) whether the three hard residuals could be
+explained by a wrong/missing compiler *build* rather than a wrong flag or C
+phrasing - a real question given `sm64ds-decomp` needed to specifically
+recover an obscure, non-obvious 2004 build (section 3a) to close a class of
+prologue mismatches nothing else could. Checked directly rather than
+guessing: read the 7z header of the archive.org-preserved Metrowerks FTP
+mirror (`ftp_metrowerks_updates.7z`, the same one `tools/recover_cw2004.py`
+already draws from) and, more relevantly, the full file list of
+`archive.org/details/cw_consoles` - a separately-preserved, dated mirror of
+Nintendo's own official DSi CodeWarrior distribution channel. Full writeup
+and exact file list: `notes/setup-mwccarm.md`. Short version: that archive's
+`DSi/` folder has exactly the nine builds already vendored in
+`tools/mwccarm/dsi/`, one-to-one, with no `1.4`, `1.5`, or plain `1.6`
+anywhere - the version-number gaps are how Nintendo itself numbered these
+SDK releases, not a hole in this project's toolchain set. **The full known
+universe of DSi-era CodeWarrior builds is already vendored here.** Don't
+re-spend time on "maybe it's a different build" for these three functions
+(or any future hard residual) without new evidence pointing at a specific
+missing version - the search has been done. Also fixed a stale claim in
+`setup-mwccarm.md`: `2004/b56` was documented as failing to launch on this
+machine; re-verified, it launches fine now and has been contributing real
+(not silently-failed) data to every `--all` sweep this session.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
