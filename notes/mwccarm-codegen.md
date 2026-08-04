@@ -988,6 +988,99 @@ single residual in this project's history (matching sm64ds-decomp's own
 walls). Not matched. Best candidate remains exact register SET (13/13), exact
 push/pop, exact total size (0x1fc) - everything except the literal final bytes.
 
+## 3b. `FUN_022d5540` - first real translation, closest first-attempt result this
+session, plus a real `match.py` methodology bug found and fixed
+
+The third and largest of the `FUN_022ce8b0` callee cluster (0x328/808 bytes,
+arm7), never translated to C before this round - earlier notes only had a
+Ghidra-summary read (unreliable, transcribed from memory) and an `m2c` draft
+(explicitly not a matching candidate). Picked up on the theory that a fresh,
+simpler-in-parts function might surface the same register-allocation lever the
+`FUN_022d5a64` wall (section 3a) needed, in a cleaner setting.
+
+**Method: traced the target's full 202-instruction raw disassembly
+(`tools/disasm.py`) end to end by hand before writing any C**, the same lesson
+learned partway through the `FUN_022d5a64` investigation, applied from the start
+this time. This resolved a real ambiguity the earlier notes had flagged: of the
+"ten mysterious 0xFFFF sentinel stack slots" noted as needing consolidation
+before translating, nine turned out to just be the literal constant `0xFFFF`
+redundantly re-materialized at different comparison/write sites (the same
+redundant-recompute idiom already established this session) - not real distinct
+source variables. Only one slot holds a genuine persistent value.
+
+**First compile, no iteration: 0x340 vs target's 0x328 (24 bytes over) - and the
+register push set already matched target's exactly** (`r4,r5,r6,r7,r8,sb,sl,fp,
+lr`, 9 registers) on the very first draft. Substantially better than either
+sibling function's first real attempt this session (`FUN_022d5a64`'s first
+serious draft was 88 bytes over AND had the wrong register count) - directly
+attributable to hand-tracing the disasm before writing C rather than iterating
+from a summary.
+
+**Two real structural mechanisms identified, both partially or fully
+independent of the sibling functions' known walls:**
+
+1. **LICM (loop-invariant code motion) hoists `queueHeadBase`/`typeFlagBase`
+   computations out of the outer 4-queue loop and spills them to stack slots**,
+   even though the source writes them freshly inside the loop body (matching
+   target's own apparent redundant-recompute-per-iteration shape) - mwccarm
+   proves they don't depend on the loop counter and hoists them anyway, then
+   pays a spill/reload cost across the loop's 4 iterations since their live
+   range now has to survive the whole loop instead of one pass. Every
+   documented `-opt` pragma lever tried against this (`noloopinvariants`,
+   `nocommonsubs`, `nocse`) had zero effect, consistent with this compiler
+   build's established pattern of ignoring named optimizer-pass toggles
+   entirely. Removing the affected variables as named locals and inlining
+   `conn + <offset>` directly at each use site DOES defeat the hoist (closest
+   raw byte count found, 0x330/8 over) but costs an extra pushed register
+   (`r3`, confirmed not actually live across either function call in this
+   candidate - the same "conservative extra register instead of a stack spill"
+   pattern found on `FUN_022d5a64`'s `cur`/`index` competition). Banked the
+   safer variant instead: inlining `freelistBase` alone gets most of the same
+   benefit while preserving the exact 9-register push set.
+2. **`prevIdx` and `firstKept` both spill to stack in every candidate tried;
+   target keeps `prevIdx` (written+tested every inner-loop iteration) in
+   register `sb` and spills only `firstKept` (write-once, read-once-after-the-
+   loop)** - a second, independent instance of the same "which of two
+   competing variables does the allocator spill" question `FUN_022d5a64`'s
+   wall never resolved. Declaration-order swap and relieving pressure by
+   inlining the unrelated `tailStruct` pointer both had zero effect. Given the
+   dedicated effort that specific question resisted on `FUN_022d5a64`, not
+   pursued further here without a new idea - now THREE independent instances
+   of this exact class of allocator behavior across this session
+   (`FUN_022d5870`'s original coloring wall, `FUN_022d5a64`'s `cur`/`index`,
+   this function's `prevIdx`/`firstKept`), reinforcing that it's a genuine,
+   consistent property of this compiler build rather than something any one
+   function's source is doing wrong.
+
+**A real `match.py` invocation bug found and fixed mid-investigation (full
+writeup in `notes/tooling.md`'s "sharper version of the same trap" entry) -
+flagged here too because it directly changed this function's own numbers.**
+Passing `--flags` on the CLI replaces the
+complete default flag set, not just the token you meant to override; this
+session's habit of typing an abbreviated `--flags "-O4,s -noThumb"` during
+iteration silently dropped `-lang c99`/`-proc arm7tdmi`/`-gccext,on`/others for
+every test. Most functions don't care - this one did: under the complete flag
+set, the epilogue changes from an (incorrect, coincidentally byte-saving)
+folded `pop {...,pc}` to the correct separate `pop {...}` + `bx lr` matching
+target - a real, structural 4-byte difference that had been silently baked into
+an entire round of "0x33c" measurements before being caught. Corrected figure
+is 0x340 (24 bytes over), with the epilogue now genuinely, not
+coincidentally, matching target. Spot-checked `FUN_022d5a64`'s own
+`BEST_dsi13.c` under the same bug - confirmed unaffected (identical result
+either way, because every abbreviated invocation of that file happened to
+still include the one override, `-O4,s`, that actually mattered for it) - but
+fixed both files' `// flags:` markers to include `-O4,s` explicitly so future
+work can safely omit `--flags` entirely rather than depending on remembering
+to re-type it correctly every time.
+
+**Where this leaves it**: `scratch/FUN_022d5540_BEST.c` - exact register push
+set (9/9), exact epilogue (verified structurally correct, not a size
+coincidence), correct overall control flow (verified against a full hand-trace,
+not guessed). 0x340 vs target's 0x328, 24 bytes / 6 instructions over,
+concentrated entirely in the two mechanisms above. Not matched, but the
+strongest first-attempt result any of this cluster's three hard functions has
+had this session.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
