@@ -1,10 +1,20 @@
 // decomp: module=arm7 addr=0x022ce658 name=FUN_022ce658
 // flags: -noThumb
-// Was parked NONMATCHING (optimizer CSE-caches a repeated base pointer across calls where the target reloads it fresh);
-// that verdict said "not byte-matchable from C at mwccarm dsi/1.3" and
-// was reached under the WRONG compiler. This ROM is built by 2.0/*
-// (notes/setup-mwccarm.md); this file compiles BYTE-EXACT on
-// 2.0/sp1..2.0/sp2p4 completely unchanged - no source edit was needed,
+//
+// Under an IRQ-disable/restore bracket: calls func_037c9d2c(), then
+// func_037c9b84() three times with a mix of fixed string/address constants
+// and 3 adjacent ConnMgr fields (+0x584/+0x588/+0x58c) - the middle call's
+// first argument is FUN_022d6bec()'s return value - then func_037c9d64().
+//
+// History: was parked NONMATCHING on the grounds that the target reloads the
+// ConnMgr base pool constant fresh before each of the 3 field accesses (3
+// separate `ldr rX,[pc,#N]` of the same 0x023190dc) while -O4 CSE cached it
+// in a callee-saved register across the intervening calls, needing 2-3 more
+// callee-saved registers (push {r4,r5,r6,lr} vs the target's {r4,lr}). Three
+// phrasings were tried and it was recorded as a real optimizer floor. It was
+// not: that verdict was reached at mwccarm dsi/1.3, and this ROM is built by
+// 2.0/* (notes/setup-mwccarm.md). This file compiles BYTE-EXACT on
+// 2.0/sp1..2.0/sp2p4 completely unchanged - no source edit was ever needed,
 // only the correct toolchain.
 
 typedef struct ConnMgr6 {
