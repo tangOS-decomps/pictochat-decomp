@@ -1099,3 +1099,19 @@ name=msl_runtime_02339e78 module=unk_autoload_0 addr=0x02339e78 size=0x6
 name=msl_runtime_02339e84 module=unk_autoload_0 addr=0x02339e84 size=0x6
 name=msl_runtime_02339e90 module=unk_autoload_0 addr=0x02339e90 size=0x6
 name=msl_runtime_02339ebc module=unk_autoload_0 addr=0x02339ebc size=0x60
+
+// Added by auto decompiler
+G_02338201 0x02338201
+
+// Added by auto decompiler
+G_023370e9 0x023370e9
+G_023c1914 0x023c1914
+G_023c1934 0x023c1934
+G_80000080 0x80000080
+
+// Added by auto decompiler
+G_023bd5e0 0x023bd5e0
+
+// Added by auto decompiler
+G_023bd60c 0x023bd60c
+G_023bd698 0x023bd698
