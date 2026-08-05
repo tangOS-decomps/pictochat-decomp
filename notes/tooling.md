@@ -983,6 +983,79 @@ with `match.py` - it is an advisor, not an oracle. When nothing fires it says
 so and prints the two commands for reading the disassemblies side by side,
 which is what found all of these rules in the first place.
 
+## tools/ghidra_batch.py - bulk drafts, with Ghidra ALIGNED to what we know
+
+`tools/ghidra_draft.py` starts a JVM and opens the project per call, and
+deliberately drafts one function at a time. That is right for picking targets
+by hand; it is impractical for the ~1250-function tail. This opens the project
+once and drafts N functions - but the bigger win is the second thing it does.
+
+**Ghidra's inferences are wrong in ways this repo has already corrected.** Every
+banked match carries a byte-verified signature, and measured against the arm9
+program: of the 195 matched functions Ghidra also knows, **104 had the wrong
+parameter count** - almost all of them "0 parameters" for a function we have
+proven takes one. A caller decompiled against a 0-argument callee simply drops
+the arguments, which is exactly the noise that makes a draft hard to turn into
+a match. Pushing the proven signatures in fixes every caller at once.
+
+```
+python tools/ghidra_batch.py --limit 20                # smallest unmatched
+python tools/ghidra_batch.py --name FUN_02320000
+python tools/ghidra_batch.py --limit 5 --no-align      # A/B the quality
+```
+
+It pushes the WHOLE prototype - return type and parameter types, not just
+arity. Arity alone stops a caller silently dropping arguments; the types are
+what stop it emitting `undefined4` and the `CONCAT22`/`_2_2_` artifacts that
+come from not knowing a value's width.
+
+**Measured, aligned vs `--no-align` on the same functions.** Be realistic about
+where this pays:
+
+- **Leaf functions: no change at all.** They call nothing matched, so there is
+  nothing to correct. A sample of 10 chosen purely by size was *identical* both
+  ways - which is why "it didn't change anything" is not evidence it does not
+  work, it usually means the sample was leaves.
+- **Callers: 7 of 8 drafts changed**, `undefined*` down 208 -> 195 across them.
+
+The aggregate numbers understate it, because the important change is
+correctness rather than tidiness - a dropped argument is wrong, not just ugly:
+
+```c
+-  puVar1 = (undefined2 *)FUN_0232dfa8();
++  puVar1 = FUN_0232dfa8(param_1,param_2);
+-  void FUN_023218cc(undefined4 param_1,undefined4 param_2,undefined4 *param_3, ...)
++  void FUN_023218cc(undefined4 *param_1,int param_2,int *param_3, ...)
+```
+
+Two things deliberately NOT done, having measured them:
+
+- **Naming known globals.** 70 `G_<addr>` names are recoverable from banked
+  matches, but their addresses have ZERO overlap with the `DAT_<addr>` symbols
+  actually appearing in drafts - those are globals nobody has matched yet. It
+  would add nothing today.
+- **Correcting Ghidra's truncated boundaries.** The excluded trailing pool is a
+  problem for BYTE COMPARISON (funcs.true_size), not for decompilation: Ghidra
+  reads the pool out of the program image regardless, and drafts resolve those
+  constants correctly already.
+
+**252 unmatched functions call at least one already-matched function**, so that
+is the population this helps, and it grows every time something is banked - the
+drafts get better as the project progresses. Target those first: they are both
+the best-drafted and the best-understood.
+
+Changes are applied IN MEMORY and the project is never saved, so it is safe to
+run against a shared project file.
+
+Drafts are written with a `// decomp:` marker, the true (pool-inclusive) size,
+and the exact `match.py` verify command in the header, so an edited draft drops
+straight into `scratch/batch/` for `tools/verify_batch.py`.
+
+Two Ghidra-API details worth keeping: `FunctionManager.getFunction()` takes a
+numeric id, not a name (build a name map once), and `replaceParameters()` needs
+a real `java.util.ArrayList` - a Python list finds no matching overload and the
+call throws.
+
 ## tools/nonmatching.py
 
 The park hatch for a function that's logic-correct (compiles, and the oracle
