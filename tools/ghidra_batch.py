@@ -80,6 +80,50 @@ def known_signatures():
     return out
 
 
+def _split_decl(decl):
+    """`unsigned short *p` -> ("unsigned short *", "p"). A parameter may also be
+    a bare type with no name (`int`), in which case the name is empty."""
+    d = decl.strip()
+    m = re.match(r"^(.*?)([A-Za-z_]\w*)$", d)
+    if not m or not m.group(1).strip():
+        return d, ""
+    return m.group(1).strip(), m.group(2)
+
+
+def ghidra_type(dt, prog):
+    """Map one of this repo's C type spellings onto a Ghidra data type.
+
+    Only the spellings that actually occur in banked matches are handled; an
+    unknown one returns None and the caller falls back to leaving Ghidra's own
+    guess alone, which is strictly better than forcing a wrong type in."""
+    from ghidra.program.model.data import (
+        VoidDataType, IntegerDataType, UnsignedIntegerDataType, ShortDataType,
+        UnsignedShortDataType, CharDataType, UnsignedCharDataType,
+        LongDataType, UnsignedLongDataType, PointerDataType, Undefined4DataType)
+    s = " ".join(dt.replace("const", "").replace("volatile", "").split())
+    stars = s.count("*")
+    s = s.replace("*", "").strip()
+    base = {
+        "void": VoidDataType(), "int": IntegerDataType(),
+        "unsigned": UnsignedIntegerDataType(), "unsigned int": UnsignedIntegerDataType(),
+        "signed int": IntegerDataType(),
+        "short": ShortDataType(), "unsigned short": UnsignedShortDataType(),
+        "char": CharDataType(), "unsigned char": UnsignedCharDataType(),
+        "signed char": CharDataType(),
+        "long": LongDataType(), "unsigned long": UnsignedLongDataType(),
+    }.get(s)
+    if base is None:
+        # An unknown struct/typedef: as a pointer it is still worth modelling
+        # (pointer-ness drives the decompiler's expressions far more than the
+        # pointee does); as a value it is not worth guessing.
+        if not stars:
+            return None
+        base = Undefined4DataType()
+    for _ in range(stars):
+        base = PointerDataType(base)
+    return base
+
+
 def pick_targets(args, done):
     funcs = [f for f in F.load_funcs() if f.get("module")]
     if args.name:
@@ -156,15 +200,20 @@ def main():
                             gf = by_name.get(name)
                             if gf is None:
                                 continue
-                            # Parameter COUNT is what actually changes a
-                            # caller's decompilation; exact widths matter less
-                            # and are riskier to force.
-                            if gf.getParameterCount() == len(ps):
-                                continue
+                            # Push the whole prototype, not just the arity.
+                            # Arity alone stops a caller dropping arguments;
+                            # TYPES are what stop it emitting undefined4 and the
+                            # CONCAT22/_2_2_ artifacts that come from not knowing
+                            # a value's width.
                             try:
-                                lst = ArrayList()      # must be a java.util.List,
-                                for i in range(len(ps)):   # a Python list finds no overload
-                                    lst.add(ParameterImpl(f"a{i}", Undefined4DataType(), prog))
+                                lst = ArrayList()      # must be a java.util.List;
+                                for i, decl in enumerate(ps):   # a Python list finds no overload
+                                    pt, pn = _split_decl(decl)
+                                    gt = ghidra_type(pt, prog) or Undefined4DataType()
+                                    lst.add(ParameterImpl(pn or f"a{i}", gt, prog))
+                                rt = ghidra_type(ret, prog)
+                                if rt is not None:
+                                    gf.setReturnType(rt, SourceType.USER_DEFINED)
                                 gf.replaceParameters(
                                     lst, Function.FunctionUpdateType.DYNAMIC_STORAGE_FORMAL_PARAMS,
                                     True, SourceType.USER_DEFINED)

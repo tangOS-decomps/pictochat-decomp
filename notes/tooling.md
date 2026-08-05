@@ -1004,19 +1004,40 @@ python tools/ghidra_batch.py --name FUN_02320000
 python tools/ghidra_batch.py --limit 5 --no-align      # A/B the quality
 ```
 
-Measured effect, aligned vs `--no-align` on the same functions: no change on
-leaf functions (nothing to fix - they call nothing matched), and a real change
-on callers. `FUN_023218cc` went from
+It pushes the WHOLE prototype - return type and parameter types, not just
+arity. Arity alone stops a caller silently dropping arguments; the types are
+what stop it emitting `undefined4` and the `CONCAT22`/`_2_2_` artifacts that
+come from not knowing a value's width.
+
+**Measured, aligned vs `--no-align` on the same functions.** Be realistic about
+where this pays:
+
+- **Leaf functions: no change at all.** They call nothing matched, so there is
+  nothing to correct. A sample of 10 chosen purely by size was *identical* both
+  ways - which is why "it didn't change anything" is not evidence it does not
+  work, it usually means the sample was leaves.
+- **Callers: 7 of 8 drafts changed**, `undefined*` down 208 -> 195 across them.
+
+The aggregate numbers understate it, because the important change is
+correctness rather than tidiness - a dropped argument is wrong, not just ugly:
 
 ```c
-puVar1 = (undefined2 *)FUN_0232dfa8();
+-  puVar1 = (undefined2 *)FUN_0232dfa8();
++  puVar1 = FUN_0232dfa8(param_1,param_2);
+-  void FUN_023218cc(undefined4 param_1,undefined4 param_2,undefined4 *param_3, ...)
++  void FUN_023218cc(undefined4 *param_1,int param_2,int *param_3, ...)
 ```
 
-to
+Two things deliberately NOT done, having measured them:
 
-```c
-puVar1 = (undefined2 *)FUN_0232dfa8(param_1, param_2);
-```
+- **Naming known globals.** 70 `G_<addr>` names are recoverable from banked
+  matches, but their addresses have ZERO overlap with the `DAT_<addr>` symbols
+  actually appearing in drafts - those are globals nobody has matched yet. It
+  would add nothing today.
+- **Correcting Ghidra's truncated boundaries.** The excluded trailing pool is a
+  problem for BYTE COMPARISON (funcs.true_size), not for decompilation: Ghidra
+  reads the pool out of the program image regardless, and drafts resolve those
+  constants correctly already.
 
 **252 unmatched functions call at least one already-matched function**, so that
 is the population this helps, and it grows every time something is banked - the
