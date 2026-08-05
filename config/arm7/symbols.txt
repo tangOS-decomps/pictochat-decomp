@@ -189,7 +189,7 @@ name=FUN_022ce7b8 module=arm7 addr=0x022ce7b8 size=0x4c
 name=FUN_022ce808 module=arm7 addr=0x022ce808 size=0x4c
 name=FUN_022ce858 module=arm7 addr=0x022ce858 size=0x28
 name=FUN_022ce884 module=arm7 addr=0x022ce884 size=0x28
-name=FUN_022ce8b0 module=arm7 addr=0x022ce8b0 size=0x114c
+name=FUN_022ce8b0 module=arm7 addr=0x022ce8b0 size=0x1194
 name=FUN_022cfa44 module=arm7 addr=0x022cfa44 size=0x34
 name=FUN_022cfa7c module=arm7 addr=0x022cfa7c size=0x14
 name=FUN_022cfa90 module=arm7 addr=0x022cfa90 size=0x78
@@ -224,15 +224,15 @@ name=FUN_022d0798 module=arm7 addr=0x022d0798 size=0x58
 name=FUN_022d07f4 module=arm7 addr=0x022d07f4 size=0x80
 name=FUN_022d0878 module=arm7 addr=0x022d0878 size=0x10
 name=FUN_022d0890 module=arm7 addr=0x022d0890 size=0x10
-name=FUN_022d08a8 module=arm7 addr=0x022d08a8 size=0x14
+name=FUN_022d08a8 module=arm7 addr=0x022d08a8 size=0x10
 name=FUN_022d08bc module=arm7 addr=0x022d08bc size=0x10
 name=FUN_022d08d4 module=arm7 addr=0x022d08d4 size=0x10
 name=FUN_022d08ec module=arm7 addr=0x022d08ec size=0x10
-name=FUN_022d0904 module=arm7 addr=0x022d0904 size=0x14
+name=FUN_022d0904 module=arm7 addr=0x022d0904 size=0x10
 name=FUN_022d0918 module=arm7 addr=0x022d0918 size=0x10
 name=FUN_022d0930 module=arm7 addr=0x022d0930 size=0x10
 name=FUN_022d0948 module=arm7 addr=0x022d0948 size=0x10
-name=FUN_022d0960 module=arm7 addr=0x022d0960 size=0x14
+name=FUN_022d0960 module=arm7 addr=0x022d0960 size=0x10
 name=FUN_022d0974 module=arm7 addr=0x022d0974 size=0x6c
 name=FUN_022d09e4 module=arm7 addr=0x022d09e4 size=0x48
 name=FUN_022d0a2c module=arm7 addr=0x022d0a2c size=0x9c
@@ -302,7 +302,7 @@ name=FUN_022d677c module=arm7 addr=0x022d677c size=0x74
 name=FUN_022d69ac module=arm7 addr=0x022d69ac size=0x24
 name=FUN_022d69d0 module=arm7 addr=0x022d69d0 size=0x48
 name=FUN_022d6a1c module=arm7 addr=0x022d6a1c size=0x1c0
-name=FUN_022d6bec module=arm7 addr=0x022d6bec size=0x14
+name=FUN_022d6bec module=arm7 addr=0x022d6bec size=0x10
 name=FUN_022d6c00 module=arm7 addr=0x022d6c00 size=0x80
 name=FUN_022d6c8c module=arm7 addr=0x022d6c8c size=0x1c
 name=FUN_022d6ca8 module=arm7 addr=0x022d6ca8 size=0xd4
@@ -338,7 +338,7 @@ name=FUN_022d7bc8 module=arm7 addr=0x022d7bc8 size=0x3c
 name=FUN_022d7c08 module=arm7 addr=0x022d7c08 size=0x74
 name=FUN_022d7c88 module=arm7 addr=0x022d7c88 size=0x60
 name=FUN_022d7cf0 module=arm7 addr=0x022d7cf0 size=0x24
-name=FUN_022d7d1c module=arm7 addr=0x022d7d1c size=0x14
+name=FUN_022d7d1c module=arm7 addr=0x022d7d1c size=0x10
 name=FUN_022d7d30 module=arm7 addr=0x022d7d30 size=0x68
 name=FUN_022d7db8 module=arm7 addr=0x022d7db8 size=0x98
 name=FUN_022d7e6c module=arm7 addr=0x022d7e6c size=0x5c
