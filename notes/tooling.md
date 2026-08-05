@@ -1002,7 +1002,26 @@ a match. Pushing the proven signatures in fixes every caller at once.
 python tools/ghidra_batch.py --limit 20                # smallest unmatched
 python tools/ghidra_batch.py --name FUN_02320000
 python tools/ghidra_batch.py --limit 5 --no-align      # A/B the quality
+python tools/ghidra_batch.py --corpus --out drafts     # ALL of them, + INDEX.md
 ```
+
+`--corpus` drafts every still-unmatched function - no size cap, no limit - into
+`<out>/<module>/<name>.c`, and writes a triage index beside them. This is what
+produced the checked-in `drafts/` corpus: 1243 drafts in one pass, no
+decompilation failures. Re-run it after a batch of matches lands; the drafts
+improve every time, because the signature alignment above is fed from the
+banked matches.
+
+Each draft header carries a `// triage: noise=N statements=M` line, and
+`INDEX.md` is sorted by it. `noise` counts markers that mean the decompiler did
+not understand something (`undefined*`, `CONCAT*`, `unaff_*`, `in_*`,
+`extraout_*`, `switchD`, `halt_baddata`, `code *`, `WARNING:`). On the full
+corpus that splits 224 clean / 586 light (1-4) / 433 heavy (5+), and 104 drafts
+are both clean and under a dozen statements - that is the pool to start from.
+
+It measures EFFORT, not correctness. A noise-0 draft can still be wrong about
+signedness, association or branch layout, which is exactly what `drafts/README.md`
+walks through.
 
 It pushes the WHOLE prototype - return type and parameter types, not just
 arity. Arity alone stops a caller silently dropping arguments; the types are
