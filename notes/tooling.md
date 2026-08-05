@@ -891,6 +891,42 @@ prints the file. Two deliberate design points:
   blocks with the size barely moving; ranking on size alone would have hidden
   that progress.
 
+## tools/declorder_search.py - hill-climb the local DECLARATION ORDER
+
+Added 2026-08-04. Declaration order is load-bearing twice on this compiler: it
+picks which callee-saved register each long-lived local gets (closed
+`FUN_022d5a64`'s last mile, mwccarm-codegen.md 3m) **and** which stack SLOT each
+spilled local gets (mwccarm-codegen.md 3p/3q).
+
+The slot half is easy to under-rate. `fdiff --align` collapses register renames
+but NOT slot renumbering, so a single wrong slot order inflates the block count
+across the whole function and reads as many independent defects. Chasing those
+one at a time is wasted effort; permuting one declaration can collapse several
+at once.
+
+That makes it a PERMUTATION search, unlike `tools/frame_search.py`'s cartesian
+toggle search, and `n!` is hopeless (19 locals = 1.2e17). This hill-climbs:
+repeatedly relocate ONE declaration to every other position, keep the single
+best improvement, repeat until nothing improves or the budget runs out - about
+`n*(n-1)` compiles per pass.
+
+```
+python tools/declorder_search.py --c scratch/draft.c --func FUN_022d5540     --addr 0x022d5540 --size 0x330 --module arm7 --version 2.0/sp1     --out scratch/best.c --max-compiles 900
+```
+
+It auto-detects the run of `    <type> <name>;` lines at the top of the function
+body (override with `--begin/--end`). Score is
+`(aligned-diff blocks, |insn delta|, |size delta|)`, lower better, and a
+byte-exact hit stops the run immediately. Scoring on BLOCKS rather than size is
+deliberate: size can sit still for many rounds while the structure converges.
+
+**Expect it to plateau, and believe the plateau.** On `FUN_022d5540` it went
+29 -> 25 blocks in 553 compiles and then found no further single-move
+improvement. Hill-climbing only explores single relocations, so a plateau means
+"no ONE move helps", not "no order helps" - but it does mean the remaining gap
+is unlikely to be declaration order at all, and further grinding here is the
+wrong lever.
+
 ## tools/nonmatching.py
 
 The park hatch for a function that's logic-correct (compiles, and the oracle
