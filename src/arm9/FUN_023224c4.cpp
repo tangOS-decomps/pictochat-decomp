@@ -1,4 +1,6 @@
 //cpp
+// decomp: module=unk_autoload_0 addr=0x023224c4 name=FUN_023224c4
+
 #pragma thumb on
 extern "C" {
 extern int G_0238e11c[];

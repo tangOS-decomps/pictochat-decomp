@@ -1,4 +1,6 @@
 //cpp
+// decomp: module=unk_autoload_0 addr=0x02339890 name=FUN_02339890
+
 #pragma thumb on
 extern "C" {
 extern void FUN_02339800(int*, int);

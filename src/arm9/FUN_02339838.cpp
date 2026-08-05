@@ -1,4 +1,6 @@
 //cpp
+// decomp: module=unk_autoload_0 addr=0x02339838 name=FUN_02339838
+
 #pragma thumb on
 extern "C" {
 struct Node { void (*func)(int); int arg; int pad; struct Node* next; };
