@@ -1023,6 +1023,17 @@ It measures EFFORT, not correctness. A noise-0 draft can still be wrong about
 signedness, association or branch layout, which is exactly what `drafts/README.md`
 walks through.
 
+```
+python tools/ghidra_batch.py --reindex --out drafts     # after banking matches
+```
+
+`--reindex` deletes the drafts of functions that are now matched and rebuilds
+`INDEX.md` from the headers already on disk. No JVM, no project open, runs in a
+second. Use it after every batch of matches lands: a draft for a function that
+is already banked is worse than clutter, it sends the next reader off to redo
+finished work. Note it reads `progress/matched.jsonl`, so run
+`tools/sync_ledger.py --apply` first or it will find nothing to drop.
+
 It pushes the WHOLE prototype - return type and parameter types, not just
 arity. Arity alone stops a caller silently dropping arguments; the types are
 what stop it emitting `undefined4` and the `CONCAT22`/`_2_2_` artifacts that

@@ -168,7 +168,12 @@ def main():
     ap.add_argument("--corpus", action="store_true",
                     help="draft EVERY still-unmatched function into <out>/<module>/, "
                          "no size cap and no limit, and write <out>/INDEX.md")
+    ap.add_argument("--reindex", action="store_true",
+                    help="drop drafts for functions that are now matched and rebuild "
+                         "<out>/INDEX.md from the remaining headers - no Ghidra needed")
     args = ap.parse_args()
+    if args.reindex:
+        return reindex(pathlib.Path(args.out))
     if args.corpus and args.max == 0x200:
         args.max = 1 << 30             # the size cap is a sampling aid, not a corpus one
 
@@ -292,6 +297,40 @@ def main():
         write_index(outdir, index, failed, applied, sigs)
         print(f"wrote {outdir/'INDEX.md'}", file=sys.stderr)
     return 0 if written else 1
+
+
+def reindex(outdir):
+    """Rebuild INDEX.md from the drafts already on disk, dropping any whose
+    function has since been matched.
+
+    Starting Ghidra to re-derive drafts that have not changed is pure waste, and
+    leaving drafts for functions that are already banked is worse than waste -
+    it sends the next reader off to redo finished work."""
+    import ledger as L
+    done = L.load_done()
+    by_addr = {(f["module"], f["addr"]): f for f in F.load_funcs() if f.get("module")}
+    index, dropped = [], []
+    for p in sorted(outdir.rglob("*.c")):
+        txt = p.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r"// decomp: module=(\S+) addr=0x([0-9a-f]+) name=(\S+)", txt)
+        t = re.search(r"// triage: noise=(\d+) statements=(\d+)", txt)
+        if not m or not t:
+            continue
+        key = (m.group(1), int(m.group(2), 16))
+        f = by_addr.get(key)
+        if f is None:
+            continue
+        if key in done:
+            p.unlink()
+            dropped.append(m.group(3))
+            continue
+        index.append((int(t.group(1)), int(t.group(2)), F.true_size(f), f, p.parent.name))
+    write_index(outdir, index, [], 0, {})
+    print(f"dropped {len(dropped)} draft(s) for now-matched functions; "
+          f"{len(index)} remain", file=sys.stderr)
+    for n in dropped[:8]:
+        print(f"  - {n}", file=sys.stderr)
+    return 0
 
 
 def write_index(outdir, index, failed, applied, sigs):
