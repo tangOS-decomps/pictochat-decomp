@@ -927,6 +927,62 @@ improvement. Hill-climbing only explores single relocations, so a plateau means
 is unlikely to be declaration order at all, and further grinding here is the
 wrong lever.
 
+## tools/match_advisor.py - "the diff says X, so what do I edit?"
+
+Added 2026-08-05. `m2c_draft.py`/`ghidra_draft.py` give reading aids, not
+matching candidates; `fdiff.py` shows WHERE two streams differ. The step
+between - deciding what to change in the C - has been done by hand every time,
+and the same handful of causes keep recurring. This encodes them.
+
+```
+python tools/match_advisor.py --c scratch/draft.c          # uses the pinned build
+python tools/match_advisor.py --c draft.c --sweep          # also report which builds match
+```
+
+Coordinates come from the file's own `// decomp:` marker, and the size from
+`funcs.true_size()`, so it cannot repeat the pool-truncation mistake.
+
+Signatures, each taken from a fix actually diagnosed by hand (the hint cites
+the function, so a suggestion can be checked against a worked precedent):
+
+| tag | means |
+|---|---|
+| `SIZE` | byte count differs - suspect the target size before the C |
+| `SLOTS` | same instructions, different `[sp,#N]` -> `declorder_search.py` |
+| `COLOR` | same instructions, different registers -> declaration order |
+| `SCHEDULE` | an instruction exists in both streams at different positions -> move the STATEMENT, do not change what it computes |
+| `WIDTH` | a `lsl #16; lsr #16` truncation on one side only -> a local is the wrong width |
+| `CMP1` | target has `cmp rX,#1` -> write `== 1`, not a bare truthiness test |
+| `TERNARY` | a `moveq`/`movne` select with swapped arms -> flip the ternary AND its test |
+| `MASK` | `ands` vs a flag-setting shift pair -> test the shifted result, not the mask |
+| `RELOC` | more relocations than call sites -> a literal modelled as `&G_<addr>` |
+| `FRAME` | push-set/`sub sp` differ -> sweep `-O4,s` vs `-O4,p` and the two honoured pragmas |
+
+Alignment is done on instructions with registers, sp-offsets AND branch targets
+abstracted away, then the raw text is re-compared inside the aligned regions -
+that is what separates "real structural difference" from "pure colour/slot
+churn". Two details that were bugs first: the sp-offset pattern must run BEFORE
+register renaming (or `sp` inside `[sp,#N]` is renamed first and the offset is
+never seen), and the trailing literal pool must be trimmed (capstone decodes
+pool words as instructions, and a fresh object has reloc placeholders where the
+ROM has real addresses).
+
+**Measured accuracy, so you know how far to trust it.** Regression-tested by
+breaking the matched `FUN_022d5a64` in four known ways:
+
+- `== 1` -> bare truthiness: fires `CMP1` (the exact fix)
+- ternary arms flipped: fires `TERNARY` (the exact fix)
+- `u16` param widened to `u32`: fires `SIZE`/`SLOTS`/`SCHEDULE` - true, but NOT
+  the precise `WIDTH` hint, because both streams still contain one `lsl/lsr #16`
+  pair and the check compares presence rather than which value is narrowed
+- zero-test moved back onto the mask expression: fires `SIZE` only, not `MASK`
+
+So it names the exact edit about half the time on these, and otherwise narrows
+the search without pinpointing it. Treat every hint as a hypothesis to test
+with `match.py` - it is an advisor, not an oracle. When nothing fires it says
+so and prints the two commands for reading the disassemblies side by side,
+which is what found all of these rules in the first place.
+
 ## tools/nonmatching.py
 
 The park hatch for a function that's logic-correct (compiles, and the oracle
