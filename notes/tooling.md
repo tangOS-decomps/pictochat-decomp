@@ -983,6 +983,70 @@ with `match.py` - it is an advisor, not an oracle. When nothing fires it says
 so and prints the two commands for reading the disassemblies side by side,
 which is what found all of these rules in the first place.
 
+## tools/twin.py - match a function by reusing its already-matched TWIN
+
+Added 2026-08-05. This ROM is full of near-duplicates: four BG base getters,
+several list-forwarding stubs, a dozen registration wrappers that differ only
+in which callback they install. Every one of those was matched by hand, one at
+a time, after reading the same shape over again.
+
+The idea is that two functions disassembling to the SAME SEQUENCE OF MNEMONICS
+differ only in their operands, so if one is matched the other's C is that same
+C with the constants swapped.
+
+```
+python tools/twin.py                       # generate candidates
+python tools/twin.py --relax --tries 6     # normalised mnemonics, verify each
+python tools/twin.py --reindex             # (see ghidra_batch) after banking
+```
+
+Three things are extracted per function, and they do different jobs:
+
+| | |
+|---|---|
+| `SKELETON` | mnemonics only - what gets COMPARED |
+| `CONSTS` | ordered immediates + resolved pool words - what gets REWRITTEN |
+| `CALLS` | ordered bl/blx destinations - what gets REMAPPED |
+
+**Remapping the calls is a correctness requirement, not an optimisation.**
+`match.py` wildcards relocation slots, so a candidate that still calls the
+twin's callees compares byte-identical while linking the wrong functions - the
+right bytes for the wrong reason. The tool refuses to emit a candidate whose
+calls it cannot line up.
+
+**Measured.** Two hand-matched forwarding stubs produced six twins immediately.
+Because every banked twin becomes a new skeleton to match against, the process
+feeds itself; running it to a fixpoint after each hand-match turned **14
+hand-matched seeds into 42 banked functions, 28 of them free.** The best single
+seed, `FUN_023369b8`, unlocked eleven.
+
+**Where it stops.** Exact-skeleton reuse against the already-matched corpus
+found only 3 candidates on its own - the matched set does not cover the
+unmatched shapes. The leverage is entirely in CLUSTERS OF UNMATCHED FUNCTIONS
+that share a skeleton with each other: hand-match one member, get the rest.
+Find them with:
+
+```
+python - <<'EOF'
+import sys, collections; sys.path.insert(0,"tools")
+import funcs as F, ledger as L, twin as T
+done=L.load_done(); fs=[f for f in F.load_funcs() if f.get("module")]
+cl=collections.defaultdict(list)
+for f in fs:
+    if (f["module"],f["addr"]) in done: continue
+    p=T.profile(f,fs)
+    if p and len(p[0])>=4: cl[p[0]].append(f)
+for c in sorted((v for v in cl.values() if len(v)>1), key=len, reverse=True)[:15]:
+    print(len(c), c[0]["name"])
+EOF
+```
+
+`--relax` compares mnemonics with condition suffixes stripped and verifies
+every candidate before keeping it - a wrong guess costs one compile. On the
+current corpus it found nothing the strict pass had not; it is there for when
+the matched set is denser.
+
+
 ## tools/ghidra_batch.py - bulk drafts, with Ghidra ALIGNED to what we know
 
 `tools/ghidra_draft.py` starts a JVM and opens the project per call, and
