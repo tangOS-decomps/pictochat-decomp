@@ -234,7 +234,11 @@ def check_file(path: str, idx: dict):
         # touching a src file was told its C "failed to compile".
         missing = [v for v in M.PINNED if not (M.MW / v / "mwccarm.exe").is_file()]
         if len(missing) == len(M.PINNED):
-            return {"file": path, "symbol": name, "verdict": "UNRESOLVED",
+            # FAILING on purpose. This case means nothing was verified, and a
+            # green check that verified nothing is worse than a red one: it
+            # invites merging an unverified match on false confidence. Keep the
+            # cause explicit (it is the box, not the PR) but do not pass.
+            return {"file": path, "symbol": name, "verdict": "NO-TOOLCHAIN",
                     "detail": ("cannot validate: NONE of the pinned mwccarm versions are "
                                 f"installed on this machine ({', '.join(M.PINNED)}). This is a "
                                 "build-box provisioning gap, not a problem with this file - "
@@ -262,8 +266,9 @@ _LABEL = {
     "COMPILE-FAIL": "❌ compile failed",
     "UNRESOLVED":   "🔶 unresolved (no header / not in symbols.txt)",
     "PARKED":       "⏸️ parked NONMATCHING (logic-correct, not byte-exact by declaration)",
+    "NO-TOOLCHAIN": "❌ could not validate (no pinned mwccarm on the build box)",
 }
-_FAIL = {"NO-REPRO", "COMPILE-FAIL"}
+_FAIL = {"NO-REPRO", "COMPILE-FAIL", "NO-TOOLCHAIN"}
 
 
 def render_md(reports, bad):
@@ -271,7 +276,12 @@ def render_md(reports, bad):
     out = []
     if bad:
         kinds = ", ".join(sorted({r["verdict"] for r in reports if r["verdict"] in _FAIL}))
-        out.append(f"**{len(bad)} of {n} changed file(s) do not compile/match** ({kinds}).")
+        if all(r["verdict"] == "NO-TOOLCHAIN" for r in reports):
+            out.append(f"**Nothing was verified: this build box has no pinned mwccarm "
+                        f"installed, so all {n} changed file(s) went unchecked.** "
+                        "This is an infrastructure problem, not a problem with the PR.")
+        else:
+            out.append(f"**{len(bad)} of {n} changed file(s) do not compile/match** ({kinds}).")
     else:
         n_ver = sum(1 for r in reports if r["verdict"] == "VERIFIED")
         n_park = sum(1 for r in reports if r["verdict"] == "PARKED")
