@@ -1873,6 +1873,47 @@ next: not another phrasing of the current shape, but a re-reading of what those
 ten slots are (a small array indexed by `q`? per-queue `firstKept`/`prevIdx`
 pairs that the current draft collapses into two scalars?).
 
+## 3s. `FUN_022d5540`: EXACT size and instruction count reached; the whole
+residual is now stack-SLOT numbering
+
+Continuing 3r by hand. Two more source-level fixes, both from reading the
+disassemblies rather than searching:
+
+3. **The two sentinel initialisations must be written `prevIdx` first, then
+   `firstKept`.** Swapping those two adjacent statements took 18 -> 14 blocks
+   AND fixed both the size and the instruction count. This is the same class as
+   the `FUN_022d5540` statement-order finding in 3l, but note it goes the
+   OPPOSITE way to what that round concluded - there, reordering was a
+   regression; here, under the correct compiler and with `cur` widened, it is
+   the single biggest remaining win. Statement-order verdicts recorded against
+   `dsi/*` should not be trusted.
+
+**State: byte size 0x330 and instruction count 203 both EXACT** (previously
+0x32c/202). `scratch/FUN_022d5540_BEST.c`.
+
+**Every one of the 14 remaining blocks is a pure stack-slot numbering
+difference** - identical instruction, different `[sp,#N]`. Target puts
+`ackClearMask`@+4, `firstKept`@+8, `result`@+0xc, `mask`@+0x10 and
+`typeFlagBase`@+0x2c; the candidate permutes these. Nothing else differs.
+
+**Ruled out for the slot assignment**, so the next session does not repeat it:
+- **Declaration order is exhausted.** `tools/declorder_search.py` from this
+  base: 343 compiles, no single relocation improves on 14.
+- **Hand-built orders matching the target's apparent slot layout are WORSE**
+  (20 blocks). Slot assignment is therefore not a simple function of
+  declaration order - the model "source locals get low slots in declaration
+  order" is disproved.
+- **Making `typeFlagBase` an inline expression instead of a named local
+  changes nothing** (byte-identical, 14 blocks). It was a reasonable
+  hypothesis - target's `typeFlagBase`@+0x2c sits high among the compiler's
+  sentinel temps rather than low with the source locals, suggesting it was a
+  CSE temp - but mwcc CSEs it back to the same thing either way.
+- Retyping `firstKept`/`prevIdx`/`QSENTINEL` (u16 vs u32) all regress to 19-20.
+
+So the remaining question is narrow and well posed: **what decides mwcc's
+stack-slot ORDER here, given it is neither declaration order nor named-vs-temp
+status?** Everything else about this function is now byte-shaped correctly.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
