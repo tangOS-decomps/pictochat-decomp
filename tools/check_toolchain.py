@@ -70,6 +70,8 @@ def main():
     launcher = os.environ.get("MWCCARM_LAUNCHER", "")
     report = {
         "repo": str(REPO),
+        "toolchain_dir": str(M.MW),
+        "toolchain_dir_from_env": M.MW_FROM_ENV,
         "canonical": M.CANONICAL,
         "pinned": list(M.PINNED),
         "license": (M.LICENSE.is_file()),
@@ -89,6 +91,11 @@ def main():
         return 0 if report["canonical_works"] else 1
 
     print(f"repo            : {report['repo']}")
+    print(f"toolchain dir   : {report['toolchain_dir']}"
+          f"   ({'MWCCARM_DIR' if report['toolchain_dir_from_env'] else 'in-tree default'})")
+    if not report["toolchain_dir_from_env"]:
+        print("                  ^ in-tree and gitignored, so a clean/re-clone deletes it; "
+              "on a validator box set MWCCARM_DIR to a path outside the clone")
     print(f"canonical build : {report['canonical']}")
     print(f"license.dat     : {'OK' if report['license'] else 'MISSING'}  ({report['license_path']})")
     if not report["windows"]:
@@ -113,9 +120,9 @@ def main():
               f"canonical build so local and CI verdicts agree.")
         return 1
     print("UNUSABLE: no pinned mwccarm build works on this machine, so nothing can be")
-    print("validated. Install the pinned toolchain into tools/mwccarm/<version>/ -")
+    print(f"validated. Install the pinned toolchain into {M.MW}{os.sep}<version>{os.sep} -")
     print(f"each needs mwccarm.exe plus {', '.join(SUPPORT)} - and put the shared")
-    print("license.dat at tools/mwccarm/license.dat. See notes/setup-mwccarm.md.")
+    print(f"license.dat at {M.LICENSE}. See notes/setup-mwccarm.md.")
     return 1
 
 

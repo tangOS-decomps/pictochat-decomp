@@ -166,19 +166,39 @@ is on PATH.
 
 **To provision:**
 
-1. Copy the pinned build directories into `tools/mwccarm/` on the box, keeping
-   the same layout as a dev machine:
+1. Put the pinned build directories **outside the clone** and point
+   `MWCCARM_DIR` at them. In-tree the compilers are untracked (gitignored), so
+   a `git clean -xdf`, a re-checkout or a fresh clone deletes them silently and
+   the next job reports a provisioning gap. Git cannot touch `/opt`:
 
    ```
-   tools/mwccarm/2.0/sp1/     <- CANONICAL; the minimum needed to validate
-   tools/mwccarm/2.0/sp1p2/   ... and the rest of match.py's PINNED list
-   tools/mwccarm/license.dat  <- shared, one level up, not per-version
+   mkdir -p /opt/mwccarm
+   cp -r <source>/tools/mwccarm/* /opt/mwccarm/
+   # in the validator's environment, alongside MWCCARM_LAUNCHER:
+   MWCCARM_DIR=/opt/mwccarm
+   ```
+
+   `match.py` reads `MWCCARM_DIR` and falls back to the in-tree
+   `tools/mwccarm/` when it is unset, so dev machines need no change and this
+   is a no-op for every existing caller. `check_toolchain.py` prints which of
+   the two it resolved, so a misconfigured box is visible in one line.
+
+   Either way the layout is the same:
+
+   ```
+   <toolchain dir>/2.0/sp1/     <- CANONICAL; the minimum needed to validate
+   <toolchain dir>/2.0/sp1p2/   ... and the rest of match.py's PINNED list
+   <toolchain dir>/license.dat  <- shared, one level up, not per-version
    ```
 
    Each version directory needs `mwccarm.exe` **plus** `ELFIO.dll`,
    `MSL_All-DLL80_x86.dll`, `lmgr8c.dll`, `mwasmarm.exe` and `mwldarm.exe`.
    `mwccarm.exe` alone fails at runtime with a DLL error that looks nothing
    like "not installed". ~3.6 MB per version, ~36 MB for the whole `2.0` tree.
+
+   All nine pinned `2.0/*` builds are the same ones sm64ds-decomp already
+   carries in its `tools/mwccarm/2.0/`, so provisioning is a copy from an
+   existing checkout rather than a fresh hunt.
 
 2. Non-Windows box: install Wine and set `MWCCARM_LAUNCHER=wine` in the
    validator's environment (`compile_c()` reads it and prefixes the command).

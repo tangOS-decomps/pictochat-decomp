@@ -30,7 +30,17 @@ from elftools.elf.elffile import ELFFile
 from capstone import Cs, CS_ARCH_ARM, CS_MODE_ARM
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
-MW = REPO / "tools" / "mwccarm"
+
+# Where the mwccarm builds live. The compilers are proprietary and gitignored
+# (see notes/setup-mwccarm.md), so in-tree they sit *untracked* inside the
+# clone - which means a `git clean -xdf`, a re-checkout or a fresh clone
+# deletes them silently, and the next PR job reports a provisioning gap. A
+# validator box should therefore keep them outside the clone (e.g.
+# /opt/mwccarm) and set MWCCARM_DIR, which git cannot touch. Unset -> the
+# in-tree path, so dev machines need no change.
+MW = (pathlib.Path(os.environ["MWCCARM_DIR"]).expanduser().resolve()
+      if os.environ.get("MWCCARM_DIR") else REPO / "tools" / "mwccarm")
+MW_FROM_ENV = bool(os.environ.get("MWCCARM_DIR"))
 LICENSE = MW / "license.dat"
 DSD_EXTRACT = REPO / "extracted" / "dsd"
 

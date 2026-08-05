@@ -46,8 +46,8 @@ CAP = REPO / "tools" / "permuter" / "cap_objdump.py"
 # Direct compile (no bash): git-bash startup is slow per-candidate on Windows;
 # calling mwccarm.exe directly is much faster. The permuter's compiler.py
 # reads cc.txt when present (see notes/permuter-setup.md's Windows-compat list).
-MWCC = REPO / "tools" / "mwccarm" / M.CANONICAL / "mwccarm.exe"
-LICENSE = REPO / "tools" / "mwccarm" / "license.dat"
+MWCC = M.MW / M.CANONICAL / "mwccarm.exe"
+LICENSE = M.LICENSE
 
 
 def find_func(module, addr, name):
