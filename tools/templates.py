@@ -710,9 +710,88 @@ def rule_zero_then_global_copy(name, ins, b):
 # ARM-only: these key on ARM's per-instruction condition codes (moveq/movne/
 # ands-before-a-conditional), which don't exist in Thumb1 (no IT blocks on
 # this ARMv5TE-era ROM) - gated to ARM-mode targets in scan().
+# Address -> known function name, so a generated tail-call names its real
+# callee instead of inventing one. Naming matters beyond aesthetics: an extern
+# whose name/address is wrong still byte-matches (match.py wildcards reloc
+# slots) but links a relocation to the WRONG symbol - the defect class found in
+# the 80-function batch (FUN_0232d250), see notes/mwccarm-codegen.md.
+_ADDR2NAME = None
+
+
+def _callee_name(addr):
+    global _ADDR2NAME
+    if _ADDR2NAME is None:
+        _ADDR2NAME = {f["addr"]: f["name"] for f in F.load_funcs() if f.get("module")}
+    # ROM code addresses are even; a Thumb callee is stored with bit0 set.
+    return _ADDR2NAME.get(addr & ~1) or ("func_%08x" % (addr & ~1))
+
+
+def rule_tailcall(name, ins, b):
+    """ldr rC,[pc,#..] ; (ldr rX,[pc,#..] | mov rX,#imm)* ; bx rC
+
+    A tail-call thunk: load the callee's address from the pool, set up any
+    CONSTANT arguments, and branch to it without ever building a frame. Any
+    register never written holds whatever the caller passed, so r0 is
+    forwarded.
+
+    Worth having as a rule because the shape is mechanical and ~18 remain - and
+    because it only became matchable when the project pin moved to 2.0/*. Under
+    dsi/* mwccarm would not emit the bare `bx` tail call from C (it always built
+    a frame), so these read as unmatchable and some were written off as
+    hand-asm. Re-tested under 2.0/sp1 they match exactly.
+    """
+    # The `bx` is not necessarily ins[-1]: when scan() retries at an extended
+    # size to reach the literal pool, capstone happily disassembles those pool
+    # WORDS as trailing junk instructions. Locate the branch instead.
+    bxi = next((k for k, i in enumerate(ins)
+                if i.mnemonic == "bx" and squash(i.op_str) != "lr"), None)
+    if bxi is None or bxi < 1:
+        return None
+    creg = squash(ins[bxi].op_str)
+    base = ins[0].address
+    vals = {}
+    for i in ins[:bxi]:
+        mn, ops = _mn(i), squash(i.op_str)
+        m = re.fullmatch(r"(r\d+|ip|sb|sl|fp),\[pc,?" + IMM + r"?\]", ops)
+        if mn == "ldr" and m:
+            off = int(m.group(2), 0) if m.group(2) else 0
+            # ARM pc is insn+8; Thumb pc is (insn+4) word-aligned.
+            pool = (i.address + 8 + off) if len(i.bytes) == 4 else (((i.address + 4) & ~3) + off)
+            k = pool - base
+            if not (0 <= k <= len(b) - 4):
+                return None
+            vals[m.group(1)] = int.from_bytes(b[k:k + 4], "little")
+            continue
+        m = re.fullmatch(r"(r\d+|ip),#(-?0x[0-9a-fA-F]+|-?\d+)", ops)
+        if mn in ("mov", "movs") and m:
+            vals[m.group(1)] = int(m.group(2), 0)
+            continue
+        return None    # anything else: not a pure constant-setup thunk
+    if creg not in vals:
+        return None
+    callee = _callee_name(vals.pop(creg))
+    args, params = [], []
+    for slot, reg in enumerate(("r0", "r1", "r2", "r3")):
+        if reg in vals:
+            v = vals[reg]
+            args.append(str(v - (1 << 32) if v >= (1 << 31) else v))
+        elif slot == 0:
+            args.append("a0")          # untouched r0 is forwarded
+            params.append("void *a0")
+        else:
+            break                      # a gap means the shape is not inferable
+    if not args:
+        return None
+    decl = ", ".join("void *" if a == "a0" else "int" for a in args)
+    return ("extern void %s(%s);\n"
+            "void %s(%s) { %s(%s); }\n"
+            % (callee, decl, name, ", ".join(params) or "void",
+               callee, ", ".join(args))), "tailcall"
+
+
 ARM_ONLY_RULES = [rule_cmp_eq, rule_bit_test, rule_global_bit_test]
 
-RULES = [rule_empty, rule_ret_const, rule_ret_arg, rule_load, rule_store,
+RULES = [rule_tailcall, rule_empty, rule_ret_const, rule_ret_arg, rule_load, rule_store,
          rule_arith, rule_global_getter, rule_load_mask, rule_bitfield,
          rule_store_const, rule_store_const_ret, rule_add_imm,
          rule_field_bitop, rule_struct_copy, rule_set_fields, rule_pool_const,
@@ -747,8 +826,16 @@ def oracle_ok(c_source, name, target, module, mode):
 
 
 def is_thunk(ins):
-    """Tail-call / linker veneer: a computed jump to anything but lr. Not
-    reproducible from a single isolated C function."""
+    """Tail-call / linker veneer: a computed jump to anything but lr.
+
+    This used to be a hard SKIP in scan(), on the grounds that a bare `bx`
+    tail call is "not reproducible from a single isolated C function". That
+    was true of dsi/*, which always built a frame instead - but it is NOT true
+    of 2.0/*, this ROM's actual compiler (notes/setup-mwccarm.md). Under
+    2.0/sp1 these reproduce exactly from ordinary C, so the skip was hiding a
+    whole matchable class; rule_tailcall handles them now and the oracle still
+    filters anything that does not really match. Kept as a predicate because
+    it is a useful thing to be able to ask about a shape."""
     return any(i.mnemonic == "bx" and squash(i.op_str) != "lr" for i in ins)
 
 
@@ -792,7 +879,7 @@ def scan(module_filter, min_size, max_size, mode_filter, extend=0):
         for size in sizes:
             tgt = F.target_bytes(f) if size == f["size"] else rom_bytes(f["module"], f["addr"], size)
             ins = list(md.disasm(tgt, 0))
-            if not ins or is_thunk(ins):
+            if not ins:
                 continue
             rules = RULES + ARM_ONLY_RULES if f["mode"] == "arm" else RULES
             for rule in rules:
