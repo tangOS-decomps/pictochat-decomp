@@ -1838,6 +1838,41 @@ differences with an untried search space, and this function is now at a
 comparable distance to where `FUN_022d5a64` sat (27 blocks) shortly before it
 closed completely.
 
+## 3q. `FUN_022d5540`: declaration-order search exhausted (29 -> 25 blocks), and
+what the target's TEN `0xffff` stack slots imply
+
+Followed 3p's own recommendation and did the declaration-order search properly
+rather than by hand, with a new tool (`tools/declorder_search.py`, hill-climbing
+over single relocations, scored on aligned-diff blocks). Result: **29 -> 25
+blocks in 553 compiles, then a hard plateau** - no single relocation of any of
+the 19 locals improves it further. Best order is recorded in
+`scratch/FUN_022d5540_BEST.c`. Still 201 real instructions vs the target's 202,
+0x32c vs the true 0x330.
+
+Hill-climbing only explores single moves, so this is not proof that no order
+matches. But combined with 3p's hand-tried orders it is strong evidence that
+**declaration order is no longer the binding constraint**, and that continuing
+to permute it is the wrong lever. Recording the plateau so the next session does
+not re-run this search.
+
+**The observation that should drive the next attempt.** Reading the target's
+loop preamble literally, it materialises `0xffff` ONCE into `sb`
+(`ldr sb,[pc,#0x280]`) and then writes that register into **ten** distinct
+stack slots (+8, +0x14, +0x18, +0x1c, +0x20, +0x24, +0x28, +0x30, +0x34, +0x38)
+before entering the loop - and later still RE-loads `0xffff` fresh from the pool
+at `+0x2bc` for the `prevIdx != QSENTINEL` test, rather than reading any of
+those slots. The loop's own `cur != QSENTINEL` test reads one of them
+(`ldr r0,[sp,#0x38]`).
+
+This project's C has exactly TWO sentinel-valued locals (`firstKept`,
+`prevIdx`), which cannot account for ten slots. Whatever the real source is, it
+appears to keep substantially more sentinel-initialised state live across the
+outer loop than this reconstruction does - a structural difference in the
+SOURCE, not an allocation artifact of it. That is the thing worth attacking
+next: not another phrasing of the current shape, but a re-reading of what those
+ten slots are (a small array indexed by `q`? per-queue `firstKept`/`prevIdx`
+pairs that the current draft collapses into two scalars?).
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
