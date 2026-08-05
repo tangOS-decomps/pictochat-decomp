@@ -1793,6 +1793,51 @@ hand-tuning (`FUN_022d5540_BEST.c` has two pragmas added specifically to
 compensate for `dsi/*` behaviour) and should be re-derived from a clean base
 under `2.0/*` rather than re-measured as-is.
 
+## 3p. `FUN_022d5540` re-derived under the CORRECT toolchain (2.0/*): 29 -> 26
+blocks, still open, and the remaining gap is now precisely named
+
+Section 3o settled that this ROM is built by `2.0/*`, which means every
+`FUN_022d5540` result in sections 3b-3n was measured against the wrong
+compiler and the draft had been hand-tuned to compensate for it. Re-derived
+from a clean base:
+
+- **`-O4,s` is still right** (`-O4,p` is far worse: +12 insns, 43 blocks).
+- **Both pragmas are still right** (`opt_common_subs off` + `opt_loop_invariants
+  off`): 29 blocks vs 36 with neither. So that tuning was not a dsi artifact
+  after all - it survives the toolchain correction.
+- **`2.0/*` beats `dsi/*` on the same source**: 29 blocks vs 35 (and 36 vs 42
+  on the un-tuned base), consistent with 3o.
+- **Declaration order moves the STACK SLOTS**, not just registers: moving
+  `result` later in the declaration list took it 29 -> 26 blocks with no other
+  change. This is the same lever that closed `FUN_022d5a64`'s last mile
+  (3m item 7), applied to slot numbering rather than callee-saved colours.
+
+**State**: 201 real instructions vs the target's 202, 0x32c vs the true size
+0x330, 26 aligned-diff blocks. Saved as `scratch/FUN_022d5540_BEST.c` with a
+header recording the verify command (`--size 0x330 --version 2.0/sp1`).
+
+**What is actually left**, read off the linear disassemblies rather than the
+block summary:
+
+1. **Stack-slot ORDER.** Target lays out `ackClearMask`@+4, a `QSENTINEL`
+   copy@+8, `result`@+0xc, `mask`@+0x10, `typeFlagBase`@+0x2c; the candidate
+   permutes these. `fdiff --align` collapses register renames but NOT slot
+   renumbering, so a single wrong slot order inflates the block count across
+   the whole function - which is why most of the 26 blocks look like
+   independent differences and are not. Fixing the order should collapse many
+   at once. Declaration-order permutation is the lever; only four orderings
+   have been tried.
+2. **A `QSENTINEL` spill.** Target materialises `0xffff` once into `sb`
+   (`ldr sb,[pc,#0x280]`) and stores `sb` directly into ten stack slots. The
+   candidate loads it into `r0`, spills it to a slot, reloads it into `sb`,
+   then `mov r0,sb` - two extra instructions of round-trip. A named local
+   holding the sentinel does NOT fix this (tried, byte-identical output).
+
+Neither is a "floor" claim: both are concrete, named, allocation-level
+differences with an untried search space, and this function is now at a
+comparable distance to where `FUN_022d5a64` sat (27 blocks) shortly before it
+closed completely.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's
