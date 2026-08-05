@@ -983,6 +983,58 @@ with `match.py` - it is an advisor, not an oracle. When nothing fires it says
 so and prints the two commands for reading the disassemblies side by side,
 which is what found all of these rules in the first place.
 
+## tools/ghidra_batch.py - bulk drafts, with Ghidra ALIGNED to what we know
+
+`tools/ghidra_draft.py` starts a JVM and opens the project per call, and
+deliberately drafts one function at a time. That is right for picking targets
+by hand; it is impractical for the ~1250-function tail. This opens the project
+once and drafts N functions - but the bigger win is the second thing it does.
+
+**Ghidra's inferences are wrong in ways this repo has already corrected.** Every
+banked match carries a byte-verified signature, and measured against the arm9
+program: of the 195 matched functions Ghidra also knows, **104 had the wrong
+parameter count** - almost all of them "0 parameters" for a function we have
+proven takes one. A caller decompiled against a 0-argument callee simply drops
+the arguments, which is exactly the noise that makes a draft hard to turn into
+a match. Pushing the proven signatures in fixes every caller at once.
+
+```
+python tools/ghidra_batch.py --limit 20                # smallest unmatched
+python tools/ghidra_batch.py --name FUN_02320000
+python tools/ghidra_batch.py --limit 5 --no-align      # A/B the quality
+```
+
+Measured effect, aligned vs `--no-align` on the same functions: no change on
+leaf functions (nothing to fix - they call nothing matched), and a real change
+on callers. `FUN_023218cc` went from
+
+```c
+puVar1 = (undefined2 *)FUN_0232dfa8();
+```
+
+to
+
+```c
+puVar1 = (undefined2 *)FUN_0232dfa8(param_1, param_2);
+```
+
+**252 unmatched functions call at least one already-matched function**, so that
+is the population this helps, and it grows every time something is banked - the
+drafts get better as the project progresses. Target those first: they are both
+the best-drafted and the best-understood.
+
+Changes are applied IN MEMORY and the project is never saved, so it is safe to
+run against a shared project file.
+
+Drafts are written with a `// decomp:` marker, the true (pool-inclusive) size,
+and the exact `match.py` verify command in the header, so an edited draft drops
+straight into `scratch/batch/` for `tools/verify_batch.py`.
+
+Two Ghidra-API details worth keeping: `FunctionManager.getFunction()` takes a
+numeric id, not a name (build a name map once), and `replaceParameters()` needs
+a real `java.util.ArrayList` - a Python list finds no matching overload and the
+call throws.
+
 ## tools/nonmatching.py
 
 The park hatch for a function that's logic-correct (compiles, and the oracle
