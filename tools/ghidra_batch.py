@@ -124,6 +124,20 @@ def ghidra_type(dt, prog):
     return base
 
 
+# Markers that mean the decompiler did NOT understand something, so the draft
+# needs real work before it is a matching candidate. Counting them is a decent
+# proxy for how far a draft is from usable - see triage_score().
+NOISE_RE = re.compile(
+    r"\bundefined\d*\b|\bCONCAT\d+\b|\bunaff_\w+|\bin_\w+|\bextraout_\w+"
+    r"|halt_baddata|switchD|\bcode \*|WARNING:")
+
+
+def triage_score(c_text):
+    """(noise, statements) for one decompiled body. Lower noise is better."""
+    body = c_text.split("\n\n", 1)[1] if "\n\n" in c_text else c_text
+    return len(NOISE_RE.findall(body)), sum(1 for l in body.splitlines() if l.strip())
+
+
 def pick_targets(args, done):
     funcs = [f for f in F.load_funcs() if f.get("module")]
     if args.name:
@@ -136,6 +150,8 @@ def pick_targets(args, done):
         un = [f for f in un if f["module"] == args.module]
     un = [f for f in un if args.min <= f["size"] <= args.max]
     un.sort(key=lambda f: (f["size"], f["addr"]))
+    if args.corpus:
+        return un                      # everything still unmatched
     return un[:args.limit]
 
 
@@ -149,7 +165,12 @@ def main():
     ap.add_argument("--out", default="scratch/drafts")
     ap.add_argument("--no-align", action="store_true",
                     help="skip pushing known signatures in (to compare draft quality)")
+    ap.add_argument("--corpus", action="store_true",
+                    help="draft EVERY still-unmatched function into <out>/<module>/, "
+                         "no size cap and no limit, and write <out>/INDEX.md")
     args = ap.parse_args()
+    if args.corpus and args.max == 0x200:
+        args.max = 1 << 30             # the size cap is a sampling aid, not a corpus one
 
     import ledger as L
     done = L.load_done()
@@ -178,7 +199,7 @@ def main():
         by_program.setdefault(PROGRAM_FOR.get(f["module"], DEFAULT_PROGRAM), []).append(f)
 
     proj = GhidraProject.openProject(str(PROJECT_DIR), PROJECT_NAME, True)
-    written, failed, applied, errors = 0, [], 0, []
+    written, failed, applied, errors, index = 0, [], 0, [], []
     try:
         for program_name, fs in by_program.items():
             prog = proj.openProgram("/", program_name, True)
@@ -236,17 +257,25 @@ def main():
                         continue
                     c = res.getDecompiledFunction().getC()
                     ts = F.true_size(f)
+                    noise, stmts = triage_score(c)
                     hdr = (f"// decomp: module={f['module']} addr=0x{f['addr']:08x} name={f['name']}\n"
                            f"// GHIDRA DRAFT - a reading aid, NOT a matching candidate.\n"
                            f"// size {ts:#x}"
                            + (f" (Ghidra's cache says {f['size']:#x} - it excludes this "
                               f"function's trailing literal pool)" if ts != f["size"] else "")
                            + f", {f['mode']}\n"
-                           f"// verify:  python tools/match.py --c <file> --func {f['name']} "
+                           f"// triage: noise={noise} statements={stmts}"
+                           + ("  <- clean draft, start here\n" if noise == 0 else "\n")
+                           + f"// verify:  python tools/match.py --c <file> --func {f['name']} "
                            f"--addr 0x{f['addr']:08x} --size {ts:#x} --module {f['module']} "
                            f"--version {M.CANONICAL}\n\n")
-                    (outdir / f"{f['name']}.c").write_text(hdr + c, encoding="utf-8")
+                    dest = outdir / f["module"] if args.corpus else outdir
+                    dest.mkdir(parents=True, exist_ok=True)
+                    (dest / f"{f['name']}.c").write_text(hdr + c, encoding="utf-8")
+                    index.append((noise, stmts, ts, f, dest.name))
                     written += 1
+                    if args.corpus and written % 100 == 0:
+                        print(f"  ... {written}/{len(targets)} drafted", file=sys.stderr)
             finally:
                 proj.close(prog)
     finally:
@@ -258,7 +287,48 @@ def main():
         print(f"  FAILED {n}: {why}", file=sys.stderr)
     for e in errors[:5]:
         print(f"  signature not applied - {e}", file=sys.stderr)
+
+    if args.corpus:
+        write_index(outdir, index, failed, applied, sigs)
+        print(f"wrote {outdir/'INDEX.md'}", file=sys.stderr)
     return 0 if written else 1
+
+
+def write_index(outdir, index, failed, applied, sigs):
+    """A pick-your-next-function table, ordered by how close a draft is to usable.
+
+    The ordering is the whole point: noise first, then statement count, then
+    byte size. A short draft with no `undefined`/`CONCAT`/`WARNING` markers is
+    one somebody can read in a minute and try to match; a long noisy one needs
+    the disassembly open anyway."""
+    index.sort(key=lambda r: (r[0], r[1], r[2]))
+    clean = [r for r in index if r[0] == 0]
+    lines = [
+        "# Draft index",
+        "",
+        f"{len(index)} drafts, {len(clean)} of them clean (no decompiler-confusion",
+        "markers at all). Generated by `tools/ghidra_batch.py --corpus`; see",
+        "`drafts/README.md` before using any of them.",
+        "",
+        "`noise` counts markers that mean the decompiler did not understand",
+        "something - `undefined*`, `CONCAT*`, `unaff_*`, `in_*`, `extraout_*`,",
+        "`switchD`, `halt_baddata`, `code *`, `WARNING:`. **Low noise and few",
+        "statements is where to start.** It is a proxy for effort, not for",
+        "correctness: a noise-0 draft can still be wrong.",
+        "",
+        "| function | module | size | mode | noise | stmts | draft |",
+        "|---|---|---:|---|---:|---:|---|",
+    ]
+    for noise, stmts, ts, f, sub in index:
+        lines.append(f"| `{f['name']}` | {f['module']} | {ts:#x} | {f['mode']} | "
+                     f"{noise} | {stmts} | [{f['name']}.c]({sub}/{f['name']}.c) |")
+    if failed:
+        lines += ["", f"## {len(failed)} function(s) Ghidra could not decompile", ""]
+        lines += [f"- `{n}` - {why}" for n, why in failed]
+    lines += ["", "---", "",
+              f"Signatures pushed into Ghidra before decompiling: {applied} applied "
+              f"from {len(sigs)} known.", ""]
+    (outdir / "INDEX.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":
