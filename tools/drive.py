@@ -228,6 +228,7 @@ def work_one(row, cfg, attempts, live=False):
     tin = tout = 0
     best = None
     best_div = 999
+    last_detail = ""
     for attempt in range(1, attempts + 1):
         try:
             text, a, b = call_model(messages, cfg)
@@ -253,6 +254,7 @@ def work_one(row, cfg, attempts, live=False):
         try:
             ok, div, detail = verify(tmp, name, row)
             if not ok:
+                last_detail = detail
                 note_attempt(f"attempt {attempt}: div={div}" + (f" ({detail})" if detail else ""))
             if ok:
                 note_attempt(f"attempt {attempt}: MATCH")
@@ -260,7 +262,7 @@ def work_one(row, cfg, attempts, live=False):
                         "c_source": code, "note": "", "log": att_log, "orig_div": None}, tin, tout
             # Keep the CLOSEST attempt, not the last one - a later try can be worse, and the
             # closest draft is what a refine pass wants to start from.
-            if div < best_div:
+            if best is None or div < best_div:
                 best_div, best = div, code
             if attempt < attempts:
                 diff = fdiff(tmp, name, row)
@@ -276,7 +278,7 @@ def work_one(row, cfg, attempts, live=False):
         finally:
             tmp.unlink(missing_ok=True)
     return {"name": name, "matched": False, "divergences": best_div, "attempts": attempts,
-            "c_source": best, "note": "", "log": att_log, "orig_div": None}, tin, tout
+            "c_source": best, "note": last_detail, "log": att_log, "orig_div": None}, tin, tout
 
 
 def _write_output(path, results, tin, tout, model):

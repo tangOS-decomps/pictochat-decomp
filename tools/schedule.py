@@ -147,7 +147,11 @@ def load_corpus():
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--module", choices=MODULES, default=None)
-    ap.add_argument("--min", type=lambda x: int(x, 0), default=0x8, help="smallest function size to offer")
+    # Default floor is 0x9, not 0x8, because the <=8-byte tier is worked out: 108 of its 113
+    # functions are matched and the 5 left are the residue that cannot be written in C at all -
+    # bare `swp` primitives and conditional-return fragments whose declared size is wrong.
+    # Smallest-first therefore handed an agent the same unmatchable three every single run.
+    ap.add_argument("--min", type=lambda x: int(x, 0), default=0x9, help="smallest function size to offer")
     ap.add_argument("--max", type=lambda x: int(x, 0), default=0x200, help="largest function size to offer")
     ap.add_argument("--limit", type=int, default=24)
     ap.add_argument("--random", action="store_true", help="shuffle rather than smallest-first")
