@@ -214,12 +214,13 @@
       "label": "Disassemble",
       "category": "analysis",
       "readOnly": true,
-      "command": "{python} tools/disasm.py --addr {addr} {flags}",
+      "command": "{python} tools/disasm.py {flags}",
       "description": "Disassemble ROM bytes at an address, resolving pc-relative pool loads. Where you start when reading a function you are about to write.",
       "args": [
         {
           "name": "addr",
           "type": "string",
+          "flag": "--addr",
           "description": "RAM address to start at."
         },
         {
@@ -253,17 +254,19 @@
       "label": "Diff candidate vs ROM",
       "category": "analysis",
       "readOnly": true,
-      "command": "{python} tools/fdiff.py --c {c} --func {func} {flags}",
+      "command": "{python} tools/fdiff.py {flags}",
       "description": "Instruction-level diff of a candidate against the ROM. What to reach for when match says no: it shows WHERE it diverges.",
       "args": [
         {
           "name": "c",
           "type": "string",
+          "flag": "--c",
           "description": "Path to the candidate C/C++ file."
         },
         {
           "name": "func",
           "type": "string",
+          "flag": "--func",
           "description": "Symbol name."
         },
         {
@@ -303,12 +306,13 @@
       "label": "Probe compiler versions",
       "category": "analysis",
       "readOnly": true,
-      "command": "{python} tools/probe_versions.py --c {c} {flags}",
+      "command": "{python} tools/probe_versions.py {flags}",
       "description": "Compile one candidate across mwccarm builds to see which produce the ROM's bytes. This title's compiler version is NOT pinned yet, so this is how it gets narrowed down.",
       "args": [
         {
           "name": "c",
           "type": "string",
+          "flag": "--c",
           "description": "Path to the candidate C/C++ file."
         },
         {
@@ -330,12 +334,13 @@
       "label": "Match advisor",
       "category": "analysis",
       "readOnly": true,
-      "command": "{python} tools/match_advisor.py --c {c} {flags}",
+      "command": "{python} tools/match_advisor.py {flags}",
       "description": "Read a candidate and suggest what to change to close the gap.",
       "args": [
         {
           "name": "c",
           "type": "string",
+          "flag": "--c",
           "description": "Path to the candidate C/C++ file."
         },
         {
@@ -372,27 +377,31 @@
       "label": "Verify a match",
       "category": "matching",
       "readOnly": true,
-      "command": "{python} tools/match.py --c {c} --func {func} --addr {addr} --size {size} {flags}",
+      "command": "{python} tools/match.py {flags}",
       "description": "THE merge gate: compile a candidate and compare it byte-for-byte with the ROM. Green here is the only thing that counts as matched.",
       "args": [
         {
           "name": "c",
           "type": "string",
+          "flag": "--c",
           "description": "Path to the candidate C/C++ file."
         },
         {
           "name": "func",
           "type": "string",
+          "flag": "--func",
           "description": "Symbol name being matched."
         },
         {
           "name": "addr",
           "type": "string",
+          "flag": "--addr",
           "description": "Function address, e.g. 0x02000c00."
         },
         {
           "name": "size",
           "type": "string",
+          "flag": "--size",
           "description": "Function size in bytes, e.g. 0x80."
         },
         {
@@ -426,12 +435,13 @@
       "label": "Cross-project match",
       "category": "matching",
       "readOnly": true,
-      "command": "{python} tools/cross_match.py --other-repo {otherRepo} {flags}",
+      "command": "{python} tools/cross_match.py {flags}",
       "description": "Find functions already matched in another decomp that byte-match here. Has landed dozens with no hand-writing - try it before anything else.",
       "args": [
         {
           "name": "otherRepo",
           "type": "string",
+          "flag": "--other-repo",
           "description": "Path to the other decomp, e.g. ../sm64ds-decomp."
         },
         {
@@ -543,7 +553,7 @@
       "label": "Sweep candidate shapes",
       "category": "matching",
       "readOnly": true,
-      "command": "{python} tools/csweep.py {spec} {flags}",
+      "command": "{python} tools/csweep.py {flags}",
       "description": "Generate and score many C shapes for one function, reporting the closest.",
       "args": [
         {
@@ -570,32 +580,37 @@
       "label": "Frame search",
       "category": "matching",
       "readOnly": false,
-      "command": "{python} tools/frame_search.py --seed {seed} --func {func} --module {module} --addr {addr} --size {size} {flags}",
+      "command": "{python} tools/frame_search.py {flags}",
       "description": "Take a seed C file marked up with choice points and search the combinations for a match.",
       "args": [
         {
           "name": "seed",
           "type": "string",
+          "flag": "--seed",
           "description": "Seed C file carrying the choice-point markers."
         },
         {
           "name": "func",
           "type": "string",
+          "flag": "--func",
           "description": "Symbol name."
         },
         {
           "name": "module",
           "type": "string",
+          "flag": "--module",
           "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
         },
         {
           "name": "addr",
           "type": "string",
+          "flag": "--addr",
           "description": "Function address."
         },
         {
           "name": "size",
           "type": "string",
+          "flag": "--size",
           "description": "Function size in bytes."
         },
         {
@@ -617,37 +632,43 @@
       "label": "Declaration-order search",
       "category": "matching",
       "readOnly": false,
-      "command": "{python} tools/declorder_search.py --c {c} --func {func} --addr {addr} --size {size} --module {module} --version {version} {flags}",
+      "command": "{python} tools/declorder_search.py {flags}",
       "description": "Permute the order of local declarations, one of the few levers that actually moves register allocation on this compiler.",
       "args": [
         {
           "name": "c",
           "type": "string",
+          "flag": "--c",
           "description": "Path to the candidate file."
         },
         {
           "name": "func",
           "type": "string",
+          "flag": "--func",
           "description": "Symbol name."
         },
         {
           "name": "addr",
           "type": "string",
+          "flag": "--addr",
           "description": "Function address."
         },
         {
           "name": "size",
           "type": "string",
+          "flag": "--size",
           "description": "Function size in bytes."
         },
         {
           "name": "module",
           "type": "string",
+          "flag": "--module",
           "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
         },
         {
           "name": "version",
           "type": "string",
+          "flag": "--version",
           "description": "Compiler version to build with."
         },
         {
