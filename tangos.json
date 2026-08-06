@@ -94,7 +94,72 @@
       "description": "Toolchain checks and ROM extraction."
     }
   ],
+  "console": {
+    "scheduler": "schedule",
+    "refineScheduler": "schedule",
+    "randomScheduler": "schedule",
+    "enrich": "schedule",
+    "verify": "match"
+  },
   "tools": [
+    {
+      "id": "schedule",
+      "label": "Pick next targets",
+      "category": "reporting",
+      "readOnly": true,
+      "command": "{python} tools/schedule.py {flags}",
+      "description": "Choose the next functions to attack and write them as a worklist. Smallest-first by default, since short functions land more work per unit of effort. Reads the Ghidra export when extracted/ is present (rows then carry ROM bytes), else the committed chaos-db.json, so targets can be picked before anything is extracted. Never offers a function that is already matched or parked.",
+      "args": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "flag": "--limit",
+          "description": "How many targets to return."
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "flag": "--out",
+          "description": "Write JSONL here instead of stdout."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "min",
+          "type": "string",
+          "flag": "--min",
+          "description": "Smallest function size to offer."
+        },
+        {
+          "name": "max",
+          "type": "string",
+          "flag": "--max",
+          "description": "Largest function size to offer."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Pin ONE function by address, ignoring the size filters. This is the enrich path."
+        },
+        {
+          "name": "random",
+          "type": "boolean",
+          "flag": "--random",
+          "description": "Shuffle instead of smallest-first, so each run re-rolls a fresh set."
+        },
+        {
+          "name": "include_attempted",
+          "type": "boolean",
+          "flag": "--include-attempted",
+          "description": "Offer functions parked as nonmatching - the ones that already carry a draft to improve. The refine pass."
+        }
+      ]
+    },
     {
       "id": "progress",
       "label": "Progress report",
