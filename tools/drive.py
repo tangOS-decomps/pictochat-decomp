@@ -150,6 +150,26 @@ def extract_code(text):
     return (m.group(1) if m else (text or "")).strip()
 
 
+def apply_mode_marker(code, mode):
+    """Force `// flags: -noThumb` onto a candidate for an ARM-mode function.
+
+    The default flags carry -thumb, so C written for an ARM function compiles to Thumb and comes
+    out roughly half the expected length: match.py reports a size mismatch and div=999 every time,
+    which reads as "the model wrote nonsense" when the code may be perfectly right. Every committed
+    ARM match in this repo carries this marker; the model is told to emit it, and this is the
+    backstop for when it doesn't.
+
+    //cpp has to stay the literal first line (that is how the build picks C++), so the marker goes
+    after it rather than above.
+    """
+    if mode != "arm" or "// flags:" in code:
+        return code
+    lines = code.split("\n")
+    at = 1 if lines and lines[0].strip().startswith("//cpp") else 0
+    lines.insert(at, "// flags: -noThumb")
+    return "\n".join(lines)
+
+
 def work_one(row, cfg, attempts, live=False):
     name = row["name"]
     size = int(str(row["size"]), 0)
@@ -191,7 +211,7 @@ def work_one(row, cfg, attempts, live=False):
                     "orig_div": None}, tin, tout
         tin += a
         tout += b
-        code = extract_code(text)
+        code = apply_mode_marker(extract_code(text), row.get("mode"))
         if not code:
             continue
         ext = "cpp" if code.lstrip().startswith("//cpp") else "c"
