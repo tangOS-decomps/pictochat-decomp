@@ -99,7 +99,9 @@
     "refineScheduler": "schedule",
     "randomScheduler": "schedule",
     "enrich": "schedule",
-    "verify": "match"
+    "verify": "match",
+    "driver": "drive",
+    "land": "land"
   },
   "tools": [
     {
@@ -799,6 +801,96 @@
       "readOnly": false,
       "command": "{python} tools/extract_pictochat.py",
       "description": "Populate extracted/ from your own legally dumped DSi PictoChat title and ARM7 BIOS. Nothing ROM-derived is ever committed."
+    },
+    {
+      "id": "drive",
+      "label": "Drive a worklist",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/drive.py {flags}",
+      "description": "Work a worklist with an LLM over an API key: show it the disassembly and target bytes, compile what it writes, byte-check it, and feed the instruction diff back on a miss. Banks nothing - land.py re-verifies every claim before anything reaches src/. Reads GLM_API_KEY, GLM_BASE_URL, GLM_MODEL and GLM_DIALECT from the environment.",
+      "args": [
+        {
+          "name": "wl",
+          "type": "string",
+          "description": "Worklist JSONL to work through.",
+          "flag": "--wl"
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "description": "Where to write the results JSON.",
+          "flag": "--out"
+        },
+        {
+          "name": "jobs",
+          "type": "integer",
+          "flag": "--jobs",
+          "description": "Targets in flight at once."
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "flag": "--attempts",
+          "description": "Tries per function before moving on."
+        }
+      ]
+    },
+    {
+      "id": "land",
+      "label": "Land a drive's results",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/land.py {flags}",
+      "description": "Bank a finished drive. Every candidate the driver claims to have matched is RE-VERIFIED here against the ROM before it reaches src/ - nothing is trusted on the driver's say-so - and anything that compiles but does not match is parked as a draft rather than dropped.",
+      "args": [
+        {
+          "name": "out",
+          "type": "string",
+          "description": "The driver's results JSON.",
+          "flag": "--output"
+        },
+        {
+          "name": "wl",
+          "type": "string",
+          "description": "The worklist the drive ran.",
+          "flag": "--wl"
+        },
+        {
+          "name": "no_claims",
+          "type": "boolean",
+          "flag": "--no-claims",
+          "description": "Accepted for compatibility; this repo has no claims board."
+        },
+        {
+          "name": "dry_run",
+          "type": "boolean",
+          "flag": "--dry-run",
+          "description": "Verify and report, bank nothing."
+        }
+      ]
+    },
+    {
+      "id": "funcs_cache",
+      "label": "Build the function cache",
+      "category": "setup",
+      "readOnly": false,
+      "command": "{python} tools/build_funcs_cache.py {flags}",
+      "description": "Join the Ghidra function metadata export with the extracted ROM to produce extracted/pictochat_funcs.json, which is what gives worklist rows their real pool-inclusive sizes and target bytes.",
+      "args": [
+        {
+          "name": "metadata",
+          "type": "string",
+          "description": "The Ghidra function metadata export (JSON list).",
+          "flag": "--metadata"
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "flag": "--out",
+          "description": "Output path."
+        }
+      ]
     }
   ]
 }

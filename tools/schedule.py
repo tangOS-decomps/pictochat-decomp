@@ -37,6 +37,23 @@ FUNCS_CACHE = REPO / "extracted" / "pictochat_funcs.json"
 MODULES = ("main", "itcm", "unk_autoload_0", "unk_autoload_2", "arm7")
 
 
+def _chaos_modules():
+    """name -> module, from the committed progress data.
+
+    funcs.module_for resolves ARM9's four segments from boundaries the dsd extraction
+    produces, so on a partial extraction it returns None for every ARM9 function. chaos-db
+    already records each function's module, so it fills those in - a row with a null module
+    is useless to an agent, which has to pass --module to every tool.
+    """
+    if not CHAOS_DB.is_file():
+        return {}
+    try:
+        db = json.loads(CHAOS_DB.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return {f["name"]: f["module"] for f in db.get("functions", []) if f.get("module")}
+
+
 def _from_ghidra():
     """The rich corpus: every function with its ROM bytes. None when not extracted."""
     if not FUNCS_CACHE.is_file():
@@ -49,19 +66,29 @@ def _from_ghidra():
         all_funcs = funcs_mod.load_funcs()
     except SystemExit:
         return None
+    fallback_modules = _chaos_modules()
     out = []
     for f in all_funcs:
         try:
-            size = funcs_mod.true_size(f, all_funcs)
+            size = int(funcs_mod.true_size(f, all_funcs))
         except Exception:
-            size = f.get("size", 0)
+            size = int(f.get("size", 0))
+        # true_size reaches PAST Ghidra's cached size to take in the trailing literal pool
+        # mwccarm emits inside the function, so the target bytes have to be re-cut to the same
+        # span. Handing out the cached-size bytes with the true size is how a candidate ends up
+        # compared against a target that stops short, which reads as a codegen bug and is not one.
+        span = None
+        if f.get("bytes") is not None:
+            span = (f["bytes"] + (f.get("gap_bytes") or ""))[: size * 2]
+            if len(span) < size * 2:
+                span = None  # not enough extracted to cover the true span; better none than short
         out.append(
             {
                 "name": f["name"],
-                "module": f["module"],
+                "module": f.get("module") or fallback_modules.get(f["name"]),
                 "addr": int(f["addr"]),
-                "size": int(size),
-                "bytes": f.get("bytes"),
+                "size": size,
+                "bytes": span,
                 "mode": f.get("mode"),
             }
         )
