@@ -1,0 +1,7 @@
+{
+ "_note": "Read by tools/chaos_db_ci.py when it builds contributions.json. `aliases` maps the handle derived from a git commit (a GitHub noreply login, else the email local-part, lowercased) to the canonical GitHub login. It matters because match coins are credited per GitHub login: a contributor whose commits use a company or personal email lands under the local-part instead, and the ledger has no way to tie that back to their account, so they earn nothing. `overrides` maps a src path to the login that should be credited, for matches where the commit author is not the matcher (work landing through someone else's consolidating PR or squash). Fix names here rather than editing contributions.json, which is regenerated on every push.",
+ "aliases": {
+  "mitch.cairns": "mitchellcairns"
+ },
+ "overrides": {}
+}

@@ -6,6 +6,12 @@
 # The chaos-data branch must already exist (seeded once as an orphan branch holding
 # chaos-db.json). tangos.dev's romstats-sync reads chaos-db.json's `stats` block from
 # that branch to publish /api/rom-stats.
+#
+# It also refreshes contributions.json on MAIN. That file is per-contributor career
+# match totals, and tangos.dev's match coin ledger credits the DELTA between it and
+# what it last paid - so a match only ever earns its author coins once this file has
+# moved. It lands on main rather than chaos-data because it is a committed fact about
+# the repo, and because the ledger reads it from the default branch.
 name: update-chaos-data
 
 on:
@@ -33,6 +39,12 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history, NOT the default shallow clone. chaos_db_ci.py resolves match
+          # authorship by replaying every commit that touched src/, so at depth 1 it sees
+          # one commit and credits every match in the repo to whoever pushed last. That
+          # fails silently - the file still generates, with the wrong names in it.
+          fetch-depth: 0
       - uses: actions/checkout@v4
         with:
           ref: chaos-data
@@ -40,9 +52,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Generate chaos-db.json (committed data only, no ROM)
-        run: python tools/chaos_db_ci.py --out _chaos_data/chaos-db.json
-      - name: Push if changed
+      - name: Generate chaos-db.json + contributions.json (committed data only, no ROM)
+        run: |
+          python tools/chaos_db_ci.py \
+            --out _chaos_data/chaos-db.json \
+            --contrib-out contributions.json
+      - name: Push progress data if changed
         run: |
           cd _chaos_data
           if git diff --quiet -- chaos-db.json; then
@@ -53,3 +68,18 @@ jobs:
           git add chaos-db.json
           git commit -m "Refresh progress data from $(git -C .. rev-parse --short HEAD)"
           git push origin chaos-data
+      - name: Push contributions.json if changed
+        # Separate from the step above on purpose: an unchanged chaos-db.json exits that
+        # step early, and contributions.json still has to be able to move on its own (a
+        # re-attribution changes who holds a match without changing the totals).
+        run: |
+          if git diff --quiet -- contributions.json; then
+            echo "no contributor change"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add contributions.json
+          git commit -m "Refresh contributions from $(git rev-parse --short HEAD)"
+          # Safe from a retrigger loop twice over: a GITHUB_TOKEN push does not start
+          # workflows, and contributions.json is not in this workflow's paths filter.
+          git push origin HEAD:main
