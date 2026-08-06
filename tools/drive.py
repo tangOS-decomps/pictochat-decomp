@@ -33,7 +33,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import pr_linkcheck as _linkcheck  # noqa: E402   the repo's own verification gate
+
 REPO = pathlib.Path(__file__).resolve().parent.parent
+# Built once: symbol name -> [(addr, size, module)], the sanity index pr_linkcheck checks a
+# header's name against before doing any work.
+_SYMBOL_IDX = _linkcheck.build_symbol_index()
 _print_lock = threading.Lock()
 
 
@@ -81,28 +86,44 @@ def fdiff(c_path, name, row):
         return ""
 
 
-DIFF_RE = re.compile(r"closest:\s+\S+\s+\((\d+)\s+differ\)")
+NDIFF_RE = re.compile(r"(\d+) word\(s\) differ")
 
 
 def verify(c_path, name, row):
-    """(matched, divergence). Divergence is the closest build's differing-word count, which is
-    what the console's live viewer reports per target; 999 is match.py's sentinel for a candidate
-    that did not compile or came out the wrong size."""
-    cmd = [
-        sys.executable, str(REPO / "tools" / "match.py"),
-        "--c", str(c_path), "--func", name,
-        "--addr", str(row["addr"]), "--size", str(row["size"]), "--module", row["module"],
-        "--brief",
-    ]
+    """(matched, divergence), decided by THIS repo's own gate - tools/pr_linkcheck.py.
+
+    Not a hand-rolled match.py call with a size we guessed. This project does not verify the way
+    sm64ds does, and the differences all matter:
+
+      * The comparison span comes from the COMPILED OBJECT, not from a size argument. Ghidra's
+        boundary table is explicitly "not the size source of truth" here, and neither is a
+        pool-extended guess - passing either produced a size mismatch and a 999 on functions that
+        actually reproduce perfectly.
+      * It sweeps every pinned mwccarm version AND both Thumb/ARM flag variants, because this
+        title's canonical version is still a guess; pinning one under-checks.
+      * The header name is often descriptive rather than the real link symbol (every C++ method
+        here), so it tries each symbol the object emits.
+      * `// NONMATCHING:` files are PARKED by declaration, not failures.
+
+    pr_linkcheck reads the target's address and module from the file's own `// decomp:` header,
+    so the candidate has to carry one - drive.py writes it.
+    """
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        return False, 999
-    text = (r.stdout or "") + (r.stderr or "")
-    if "MATCHING VERSIONS: none" not in text and ": MATCH" in text:
-        return True, 0
-    m = DIFF_RE.search(text)
-    return False, int(m.group(1)) if m else 999
+        rel = str(pathlib.Path(c_path).resolve().relative_to(REPO))
+    except ValueError:
+        rel = str(c_path)
+    try:
+        rep = _linkcheck.check_file(rel, _SYMBOL_IDX)
+    except Exception as e:
+        return False, 999, f"{type(e).__name__}: {e}"
+    verdict = rep.get("verdict")
+    if verdict == "VERIFIED":
+        return True, 0, ""
+    detail = rep.get("detail") or verdict
+    m = NDIFF_RE.search(detail or "")
+    # 999 stays the "no usable divergence count" sentinel (didn't compile, unresolved), which is
+    # what tells land.py a draft is not worth parking.
+    return False, int(m.group(1)) if m else 999, detail
 
 
 def call_model(messages, cfg):
@@ -150,18 +171,28 @@ def extract_code(text):
     return (m.group(1) if m else (text or "")).strip()
 
 
-def apply_mode_marker(code, mode):
-    """Force `// flags: -noThumb` onto a candidate for an ARM-mode function.
+def with_header(code, name, row):
+    """Give a candidate the `// decomp:` header this repo identifies files by.
 
-    The default flags carry -thumb, so C written for an ARM function compiles to Thumb and comes
-    out roughly half the expected length: match.py reports a size mismatch and div=999 every time,
-    which reads as "the model wrote nonsense" when the code may be perfectly right. Every committed
-    ARM match in this repo carries this marker; the model is told to emit it, and this is the
-    backstop for when it doesn't.
+    pr_linkcheck resolves a file's target from that header, not from arguments, so a candidate
+    without one is UNRESOLVED however good the C is. Note there is deliberately no size in it:
+    the span comes from what the compiler emits.
 
-    //cpp has to stay the literal first line (that is how the build picks C++), so the marker goes
-    after it rather than above.
+    //cpp has to stay the literal first line - that is how the build picks C++ - so the header
+    goes after it rather than above.
     """
+    if "// decomp:" in code:
+        return code
+    hdr = f"// decomp: module={row['module']} addr={row['addr']} name={name}"
+    lines = code.split("\n")
+    at = 1 if lines and lines[0].strip().startswith("//cpp") else 0
+    lines.insert(at, hdr)
+    return "\n".join(lines)
+
+
+def apply_mode_marker(code, mode):
+    """Kept only for the ARM/Thumb hint in the prompt path; pr_linkcheck's resolve_flags already
+    tries both variants, so this is no longer load-bearing."""
     if mode != "arm" or "// flags:" in code:
         return code
     lines = code.split("\n")
@@ -211,17 +242,18 @@ def work_one(row, cfg, attempts, live=False):
                     "orig_div": None}, tin, tout
         tin += a
         tout += b
-        code = apply_mode_marker(extract_code(text), row.get("mode"))
+        code = extract_code(text)
         if not code:
             continue
+        code = with_header(code, name, row)
         ext = "cpp" if code.lstrip().startswith("//cpp") else "c"
-        tmp = REPO / "extracted" / f"_drive_{name}_{attempt}.{ext}"
+        tmp = REPO / "extracted" / "_drive" / f"{name}_{attempt}.{ext}"
         tmp.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text(code, encoding="utf-8")
         try:
-            ok, div = verify(tmp, name, row)
+            ok, div, detail = verify(tmp, name, row)
             if not ok:
-                note_attempt(f"attempt {attempt}: div={div}")
+                note_attempt(f"attempt {attempt}: div={div}" + (f" ({detail})" if detail else ""))
             if ok:
                 note_attempt(f"attempt {attempt}: MATCH")
                 return {"name": name, "matched": True, "divergences": 0, "attempts": attempt,

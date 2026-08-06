@@ -22,8 +22,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import ledger  # noqa: E402
 import match as match_mod  # noqa: E402
+import pr_linkcheck as _linkcheck  # noqa: E402   this repo's own verification gate
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+_SYMBOL_IDX = _linkcheck.build_symbol_index()
 
 
 def load_worklist(path):
@@ -46,27 +48,34 @@ def load_worklist(path):
     return rows
 
 
-def verify(c_path, name, row, version):
-    """Re-run the byte gate ourselves. True only on a real match."""
-    cmd = [
-        sys.executable,
-        str(REPO / "tools" / "match.py"),
-        "--c", str(c_path),
-        "--func", name,
-        "--addr", str(row["addr"]),
-        "--size", str(row["size"]),
-        "--module", row["module"],
-        "--brief",
-    ]
-    if version:
-        cmd += ["--version", version]
+def verify(c_path, name, row, version=None):
+    """Re-run THIS repo's own gate - tools/pr_linkcheck.py. True only on VERIFIED.
+
+    Deliberately not a match.py call with a size we chose. Here the comparison span comes from the
+    compiled object, and the gate sweeps every pinned mwccarm version and both Thumb/ARM flag
+    variants, because this title's canonical version is still a guess. Picking a size and a version
+    ourselves failed 7 of 25 already-matched files that this gate verifies cleanly - it would have
+    rejected real matches on their way into src/."""
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        return False, "verify timed out"
-    text = (out.stdout or "") + (out.stderr or "")
-    ok = "MATCHING VERSIONS: none" not in text and ": MATCH" in text
-    return ok, text.strip().splitlines()[-1] if text.strip() else ""
+        rel = str(pathlib.Path(c_path).resolve().relative_to(REPO)).replace("\\", "/")
+    except ValueError:
+        rel = str(c_path)
+    try:
+        rep = _linkcheck.check_file(rel, _SYMBOL_IDX)
+    except Exception as e:
+        return False, f"{type(e).__name__}: {e}"
+    return rep.get("verdict") == "VERIFIED", (rep.get("detail") or rep.get("verdict") or "")
+
+
+def with_header(code, name, row):
+    """The `// decomp:` header the gate resolves a file's target from; //cpp stays first."""
+    if "// decomp:" in code:
+        return code
+    hdr = f"// decomp: module={row['module']} addr={row['addr']} name={name}"
+    lines = code.split("\n")
+    at = 1 if lines and lines[0].strip().startswith("//cpp") else 0
+    lines.insert(at, hdr)
+    return "\n".join(lines)
 
 
 def main():
@@ -110,7 +119,8 @@ def main():
             continue
 
         ext = "cpp" if c_source.lstrip().startswith("//cpp") else "c"
-        tmp = REPO / "extracted" / f"_land_{name}.{ext}"
+        c_source = with_header(c_source, name, row)
+        tmp = REPO / "extracted" / "_land" / f"{name}.{ext}"
         tmp.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text(c_source, encoding="utf-8")
         try:
