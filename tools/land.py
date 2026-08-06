@@ -86,9 +86,17 @@ def main():
 
     banked, rejected, parked, skipped = [], [], [], []
 
-    for cand in data.get("candidates", []) or data.get("results", []):
+    # The driver writes matched C into `sources` (name -> text) and compiling-but-not-matching
+    # drafts into `nearMisses`; `results` carries only the verdicts. Older files that inlined
+    # c_source on the result still work.
+    sources = dict(data.get("sources") or {})
+    for nm in data.get("nearMisses") or []:
+        if nm.get("name") and nm.get("c_source"):
+            sources.setdefault(nm["name"], nm["c_source"])
+
+    for cand in data.get("candidates") or data.get("results") or []:
         name = cand.get("name")
-        c_source = cand.get("c_source")
+        c_source = cand.get("c_source") or sources.get(name)
         if not name or not c_source:
             continue
         row = rows.get(name) or cand

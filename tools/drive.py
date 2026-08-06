@@ -27,11 +27,21 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+_print_lock = threading.Lock()
+
+
+def log(msg):
+    with _print_lock:
+        print(msg, flush=True)
+
+
 SYSTEM = (
     "You are decompiling a Nintendo DSi ARM binary into C that a period CodeWarrior compiler "
     "(mwccarm) rebuilds BYTE FOR BYTE. Byte-exact is the only success. Reply with one fenced C "
@@ -71,7 +81,13 @@ def fdiff(c_path, name, row):
         return ""
 
 
+DIFF_RE = re.compile(r"closest:\s+\S+\s+\((\d+)\s+differ\)")
+
+
 def verify(c_path, name, row):
+    """(matched, divergence). Divergence is the closest build's differing-word count, which is
+    what the console's live viewer reports per target; 999 is match.py's sentinel for a candidate
+    that did not compile or came out the wrong size."""
     cmd = [
         sys.executable, str(REPO / "tools" / "match.py"),
         "--c", str(c_path), "--func", name,
@@ -81,9 +97,12 @@ def verify(c_path, name, row):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired:
-        return False
+        return False, 999
     text = (r.stdout or "") + (r.stderr or "")
-    return "MATCHING VERSIONS: none" not in text and ": MATCH" in text
+    if "MATCHING VERSIONS: none" not in text and ": MATCH" in text:
+        return True, 0
+    m = DIFF_RE.search(text)
+    return False, int(m.group(1)) if m else 999
 
 
 def call_model(messages, cfg):
@@ -131,9 +150,18 @@ def extract_code(text):
     return (m.group(1) if m else (text or "")).strip()
 
 
-def work_one(row, cfg, attempts):
+def work_one(row, cfg, attempts, live=False):
     name = row["name"]
     size = int(str(row["size"]), 0)
+    att_log = []  # per-attempt lines, printed by the caller BELOW the result header
+
+    def note_attempt(msg):
+        att_log.append(msg)
+        if live:
+            log(f"    {name} {msg}")
+
+    if live:  # immediate feedback: which function is being worked, before the slow model call
+        log(f"-> {name}: writing from scratch with {cfg['model']} (up to {attempts} attempts)...")
     listing = disasm(row["module"], str(row["addr"]), size, (row.get("mode") == "thumb"))
     prompt = [
         f"Function: {name}",
@@ -148,14 +176,19 @@ def work_one(row, cfg, attempts):
 
     tin = tout = 0
     best = None
+    best_div = 999
     for attempt in range(1, attempts + 1):
         try:
             text, a, b = call_model(messages, cfg)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
-            return {"name": name, "matched": False, "error": f"HTTP {e.code}: {detail}"}, tin, tout
+            return {"name": name, "matched": False, "divergences": 999, "attempts": attempt,
+                    "c_source": None, "note": f"HTTP {e.code}: {detail}", "log": att_log,
+                    "orig_div": None}, tin, tout
         except Exception as e:
-            return {"name": name, "matched": False, "error": f"{type(e).__name__}: {e}"}, tin, tout
+            return {"name": name, "matched": False, "divergences": 999, "attempts": attempt,
+                    "c_source": None, "note": f"{type(e).__name__}: {e}", "log": att_log,
+                    "orig_div": None}, tin, tout
         tin += a
         tout += b
         code = extract_code(text)
@@ -166,9 +199,17 @@ def work_one(row, cfg, attempts):
         tmp.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text(code, encoding="utf-8")
         try:
-            if verify(tmp, name, row):
-                return {"name": name, "matched": True, "c_source": code, "attempts": attempt}, tin, tout
-            best = code
+            ok, div = verify(tmp, name, row)
+            if not ok:
+                note_attempt(f"attempt {attempt}: div={div}")
+            if ok:
+                note_attempt(f"attempt {attempt}: MATCH")
+                return {"name": name, "matched": True, "divergences": 0, "attempts": attempt,
+                        "c_source": code, "note": "", "log": att_log, "orig_div": None}, tin, tout
+            # Keep the CLOSEST attempt, not the last one - a later try can be worse, and the
+            # closest draft is what a refine pass wants to start from.
+            if div < best_div:
+                best_div, best = div, code
             if attempt < attempts:
                 diff = fdiff(tmp, name, row)
                 messages += [
@@ -182,7 +223,34 @@ def work_one(row, cfg, attempts):
                 ]
         finally:
             tmp.unlink(missing_ok=True)
-    return {"name": name, "matched": False, "c_source": best, "attempts": attempts}, tin, tout
+    return {"name": name, "matched": False, "divergences": best_div, "attempts": attempts,
+            "c_source": best, "note": "", "log": att_log, "orig_div": None}, tin, tout
+
+
+def _write_output(path, results, tin, tout, model):
+    """Same shape glm_refine writes, because Console parses this file: landedNames drives what
+    counts as landed, nearMisses is what gets parked, and the token fields feed the agent stats."""
+    landed = [r for r in results if r["matched"]]
+    out = {
+        "model": model,
+        "attempted": len(results),
+        "landed": len(landed),
+        "landedNames": [r["name"] for r in landed],
+        "outputTokens": tout,
+        "inputTokens": tin,
+        "tokensPerLanded": round(tout / len(landed)) if landed else None,
+        "results": [{"name": r["name"], "matched": r["matched"], "attempts": r["attempts"],
+                     "divergences": r["divergences"], "note": r["note"]} for r in results],
+        "sources": {r["name"]: r["c_source"] for r in landed if r["c_source"]},
+        # Only COMPILING drafts are worth banking. divergences==999 is the verifier's "no
+        # divergence count" sentinel: the draft did not compile, so its c_source is not a usable
+        # near-miss - banking it would just add non-reproducing noise. A draft that compiled
+        # (div < 999), even a loose one, is real progress from nothing and is saved.
+        "nearMisses": [{"name": r["name"], "c_source": r["c_source"]}
+                       for r in results
+                       if not r["matched"] and r["c_source"] and r["divergences"] < 999],
+    }
+    pathlib.Path(path).write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 
 def main():
@@ -212,31 +280,38 @@ def main():
     if not rows:
         sys.exit(f"{args.wl} is empty - nothing to drive")
 
+    t0 = time.time()
     results, tin, tout = [], 0, 0
+    live = args.jobs <= 1  # sequential runs stream each attempt; parallel ones would interleave
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        for res, a, b in pool.map(lambda r: work_one(r, cfg, args.attempts), rows):
+        futs = [pool.submit(work_one, r, cfg, args.attempts, live) for r in rows]
+        # as_completed, not map: map yields in submission order, so one slow target holds back every
+        # result behind it and the viewer's bar sits at zero while work is actually finishing.
+        for f in as_completed(futs):
+            res, i_tok, o_tok = f.result()
+            tin += i_tok
+            tout += o_tok
             results.append(res)
-            tin += a
-            tout += b
-            mark = "MATCH" if res.get("matched") else (res.get("error") or "no match")
-            print(f"{res['name']}: {mark}", flush=True)
+            # Result-first block: header (index, name, final div) then this function's attempts
+            # indented below, so each function reads as one tidy unit and a new header means the
+            # previous one finished. The header shape is what the console's live viewer parses -
+            # anything else and the analyzed bar never climbs.
+            status = "MATCH" if res["matched"] else "div=" + str(res["divergences"])
+            orig = res.get("orig_div")
+            if isinstance(orig, int) and orig > 0:
+                status += f" (from: {orig})"
+            lines = [f"({len(results)}/{len(rows)}) {res['name']}: {status}"]
+            if not live:  # sequential runs already streamed these attempts live
+                lines += [f"    {ln}" for ln in res.get("log", [])]
+            log("\n".join(lines))
 
-    out = {
-        "results": results,
-        "landed": [r["name"] for r in results if r.get("matched")],
-        # Compiling-but-not-matching drafts. Kept so land.py can park them: a close attempt is
-        # the best starting point for the next one, and dropping it loses real work.
-        "nearMisses": [
-            {"name": r["name"], "c_source": r["c_source"]}
-            for r in results
-            if not r.get("matched") and r.get("c_source")
-        ],
-        "tokensIn": tin,
-        "tokensOut": tout,
-    }
-    pathlib.Path(args.out).write_text(json.dumps(out, indent=1), encoding="utf-8")
-    landed = len(out["landed"])
-    print(f"\n{landed}/{len(results)} matched   tokens in={tin} out={tout}   -> {args.out}")
+    _write_output(args.out, results, tin, tout, cfg["model"])
+    landed = [r for r in results if r["matched"]]
+    mins = (time.time() - t0) / 60
+    print(f"\n{cfg['model']}: landed {len(landed)}/{len(results)} in {mins:.0f}m; "
+          f"in={tin} out={tout} tok"
+          + (f" ({round(tout / len(landed))} out/landed)" if landed else ""))
+    print(f"land with: python tools/land.py --output {args.out} --wl {args.wl}")
 
 
 if __name__ == "__main__":
