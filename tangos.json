@@ -7,7 +7,7 @@
     "github": "https://github.com/tangOS-decomps/pictochat-decomp",
     "language": "C",
     "platform": "nds",
-    "compiler": "mwccarm (CodeWarrior for embedded ARM), a dsi/ build - version NOT yet pinned. Sweep the dsi builds (dsi/1.1, 1.1p1, 1.2, 1.2p1, 1.2p2, 1.3, 1.3p1, 1.6sp1, 1.6sp2); dsi/1.3 is the working guess for a 2009 launch-window system title. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
+    "compiler": "mwccarm (CodeWarrior for embedded ARM), the 2.0/ family - PINNED 2026-08-04 by byte evidence; canonical is 2.0/sp1 (tools/match.py CANONICAL). Do NOT sweep the dsi/ builds or restore a dsi pin: across the banked corpus 156 functions compile identically under both families, 3 match under 2.0/* only, and 0 match under dsi/* only - dsi/* is structurally incapable of three of them. The old dsi/1.3 guess was a plausibility argument from the DSi release date, never verified. Evidence in notes/setup-mwccarm.md. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
     "cppNote": "If a name starts with _Z (C++ mangled), write C++ with the FIRST LINE exactly //cpp - the build compiles a src file as C++ when its first line is //cpp, else as c99.",
     "setup": "clone {github} and follow CONTRIBUTING.md. You bring your own dumps (nothing copyrighted is in the repo): your own DSi PictoChat title (assets/pictochat.nds) and your own ARM7 BIOS (assets/bios7.bin). Set up mwccarm (a dsi build) per notes/setup-mwccarm.md, `pip install ndspy capstone pyelftools pyghidra`, then `python tools/extract_pictochat.py` to populate extracted/.",
     "verifyCommand": "python tools/match.py --c yourfile.c --func {name} --addr 0x{addrHex} --size 0x{sizeHex} --module {module} --trio",
@@ -22,7 +22,7 @@
       "nonMatching": "tools/nonmatching.py parks logic-correct, not-byte-exact drafts with a `// NONMATCHING:` marker",
       "crossProject": "tools/cross_match.py --other-repo ../sm64ds-decomp",
       "drafts": "tools/ghidra_draft.py, tools/m2c_draft.py, tools/permuter/",
-      "canonicalVersion": "dsi/1.3 (unconfirmed)"
+      "canonicalVersion": "2.0/sp1"
     },
     "modules": [
       "main",
