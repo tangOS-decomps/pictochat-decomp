@@ -22,6 +22,7 @@ set and the parked-nonmatching set, so a target that someone already banked or p
 is never handed out again.
 """
 import argparse
+import difflib
 import json
 import pathlib
 import random
@@ -144,6 +145,100 @@ def load_corpus():
     return (rich, True) if rich else (_from_chaos_db(), False)
 
 
+# ---------------------------------------------------------------------------
+# Similarity ranking (--similar)
+#
+# Smallest-first asks "what is cheapest to attempt". This asks "what most resembles something
+# already solved", and hands the model those solved functions as worked examples. sm64ds's
+# equivalent (tools/coddog.py) took that repo from a ~50% to a ~71% per-target hit rate, so it
+# is worth having here - but the ranking is only as good as the example pool, which is why a
+# parked NONMATCHING draft is never offered as one.
+# ---------------------------------------------------------------------------
+
+_DECODERS = {}
+
+
+def _decoder(mode):
+    """Capstone decoder for a function's instruction set.
+
+    Mode matters far more here than on an all-ARM repo: PictoChat is mostly Thumb (1078 of
+    1551 functions), so decoding everything as ARM would turn most of the corpus into garbage
+    mnemonics and rank on the garbage."""
+    import capstone
+
+    key = "thumb" if mode == "thumb" else "arm"
+    if key not in _DECODERS:
+        _DECODERS[key] = capstone.Cs(
+            capstone.CS_ARCH_ARM,
+            capstone.CS_MODE_THUMB if key == "thumb" else capstone.CS_MODE_ARM,
+        )
+    return _DECODERS[key]
+
+
+def _opseq(hex_bytes, mode):
+    """A function's mnemonic sequence, or () when its bytes were not extracted."""
+    if not hex_bytes:
+        return ()
+    try:
+        raw = bytes.fromhex(hex_bytes)
+    except ValueError:
+        return ()
+    return tuple(i.mnemonic for i in _decoder(mode).disasm(raw, 0))
+
+
+def _src_text(name, module):
+    """The committed source for a function, or None. arm7 lives in src/arm7/, everything else
+    in src/arm9/ (the dirs are per-processor, not per-module)."""
+    d = REPO / "src" / ("arm7" if module == "arm7" else "arm9")
+    for ext in (".c", ".cpp"):
+        p = d / f"{name}{ext}"
+        if p.is_file():
+            try:
+                return p.read_text(encoding="utf-8")
+            except OSError:
+                return None
+    return None
+
+
+def _jaccard(a, b):
+    return len(a & b) / len(a | b) if (a or b) else 0.0
+
+
+def _example_pool(corpus, matched_keys):
+    """Functions usable as worked examples: matched, with extractable bytes, and carrying a
+    committed source that is NOT a parked `// NONMATCHING` draft. Showing a model a draft that
+    is known not to reproduce the ROM teaches it the wrong shape."""
+    pool = []
+    for f in corpus:
+        if ledger.make_key(f["module"], f["addr"]) not in matched_keys:
+            continue
+        ops = _opseq(f.get("bytes"), f.get("mode"))
+        if not ops:
+            continue
+        src = _src_text(f["name"], f["module"])
+        if src is None or "// NONMATCHING" in src[:200]:
+            continue
+        pool.append({"name": f["name"], "ops": ops, "opset": frozenset(ops), "src": src})
+    return pool
+
+
+def _top_siblings(target_ops, pool, k, jmin, lenlo=0.5, lenhi=2.0):
+    """The k most opcode-similar examples: a cheap length window and set-overlap prune, then a
+    real sequence ratio on whatever survives (autojunk off - it misfires on code)."""
+    n = len(target_ops)
+    tset = frozenset(target_ops)
+    scored = []
+    for m in pool:
+        lm = len(m["ops"])
+        if lm < n * lenlo or lm > n * lenhi:
+            continue
+        if _jaccard(tset, m["opset"]) < jmin:
+            continue
+        scored.append((difflib.SequenceMatcher(None, target_ops, m["ops"], autojunk=False).ratio(), m))
+    scored.sort(key=lambda x: -x[0])
+    return scored[:k]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--module", choices=MODULES, default=None)
@@ -155,6 +250,17 @@ def main():
     ap.add_argument("--max", type=lambda x: int(x, 0), default=0x200, help="largest function size to offer")
     ap.add_argument("--limit", type=int, default=24)
     ap.add_argument("--random", action="store_true", help="shuffle rather than smallest-first")
+    ap.add_argument(
+        "--similar",
+        action="store_true",
+        help="rank by opcode similarity to already-matched functions and attach those as worked "
+        "examples, rather than smallest-first. Needs extracted/ for the ROM bytes.",
+    )
+    ap.add_argument("--k", type=int, default=2, help="--similar: worked examples attached per target")
+    ap.add_argument(
+        "--jmin", type=float, default=0.55,
+        help="--similar: minimum opcode-set overlap to consider an example at all (prune)",
+    )
     ap.add_argument("--addr", default=None, help="pin ONE function by address; ignores the size filters")
     ap.add_argument("--out", default=None, help="write JSONL here; omit to stream to stdout")
     ap.add_argument("--include-done", action="store_true", help="do not filter out matched/parked functions")
@@ -201,7 +307,29 @@ def main():
             rows.append(f)
         # Smallest first is the useful default: short functions match more often per unit of
         # effort, so a batch of them lands more work than the same count of large ones.
-        if args.random:
+        if args.similar:
+            pool = _example_pool(corpus, matched_keys)
+            if not pool:
+                sys.exit(
+                    "--similar has nothing to rank against: it needs extracted/ (for ROM bytes) "
+                    "and matched sources under src/. Run tools/extract_pictochat.py, or drop "
+                    "--similar to fall back to smallest-first."
+                )
+            ranked = []
+            for f in rows:
+                ops = _opseq(f.get("bytes"), f.get("mode"))
+                if not ops:
+                    continue  # no bytes extracted: unrankable, and unshowable to a model anyway
+                sibs = _top_siblings(ops, pool, args.k, args.jmin)
+                f = dict(f)
+                f["_sim"] = sibs[0][0] if sibs else 0.0
+                f["_sibs"] = sibs
+                ranked.append(f)
+            # Best resemblance first. Size breaks ties so an unrankable-but-tiny function still
+            # sorts ahead of an unrankable large one.
+            ranked.sort(key=lambda f: (-f["_sim"], f["size"], f["addr"]))
+            rows = ranked
+        elif args.random:
             random.shuffle(rows)
         else:
             rows.sort(key=lambda f: (f["size"], f["addr"]))
@@ -219,6 +347,12 @@ def main():
             row["target_hex"] = f["bytes"]
         if f.get("mode"):
             row["mode"] = f["mode"]
+        if f.get("_sibs") is not None:
+            # Field names match sm64ds's coddog worklist rows on purpose: drive.py speaks that
+            # same protocol, so one driver reads either repo's worklist without a special case.
+            row["coddog_sim"] = round(f["_sim"], 4)
+            row["siblings"] = [{"name": m["name"], "sim": round(r, 4)} for r, m in f["_sibs"]]
+            row["examples"] = [{"name": m["name"], "c_source": m["src"]} for _, m in f["_sibs"]]
         lines.append(json.dumps(row))
 
     text = "\n".join(lines)
