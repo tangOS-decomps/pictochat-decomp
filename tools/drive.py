@@ -222,6 +222,19 @@ def work_one(row, cfg, attempts, live=False):
         prompt.append(f"Target bytes: {row['target_hex']}")
     if listing:
         prompt.append("\nDisassembly:\n" + listing)
+    # Worked examples from the scheduler's --similar mode: already-matched functions whose
+    # opcode sequence resembles this one, plus the C that actually reproduced them. A sibling
+    # near 1.0 usually means the same shape with different operands, which is worth far more to
+    # the model than the disassembly alone. Absent (plain smallest-first worklist) this is a
+    # no-op, so the driver reads either kind of worklist.
+    sims = {s.get("name"): s.get("sim") for s in (row.get("siblings") or [])}
+    for ex in row.get("examples") or []:
+        if not ex.get("c_source"):
+            continue
+        sim = sims.get(ex.get("name"))
+        header = f"\nAlready-matched function with a similar shape ({ex.get('name')}"
+        header += f", opcode similarity {sim}):\n" if sim is not None else "):\n"
+        prompt.append(header + ex["c_source"])
     prompt.append("\nWrite the C that rebuilds this function byte for byte.")
     messages = [{"role": "user", "content": "\n".join(prompt)}]
 
