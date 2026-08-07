@@ -147,6 +147,27 @@ def main():
         else:
             parked.append(name)
 
+    # The free tier, the way sm64ds's crackloop land does it (crackloop.py runs clone then
+    # paramclone here). A function just banked is new material for the pattern tools - it can
+    # be the template, or the byte-identical twin, that unlocks several more - so immediately
+    # after banking is the cheapest moment to run them. This costs compiles, not model tokens,
+    # and until now nothing ran it: these tools existed but only ever fired by hand.
+    #
+    # Only the two that bank on their own. twin.py searches and reports but has no banking
+    # flag, so it stays a manual step. Never fatal: a post-pass failure must not cost us the
+    # matches already banked above.
+    if banked and not args.dry_run:
+        for tool, extra in (("find_duplicates.py", ["--apply"]), ("templates.py", ["--apply"])):
+            print(f"\n-- free tier: {tool} {' '.join(extra)}")
+            try:
+                subprocess.run(
+                    [sys.executable, str(pathlib.Path(__file__).resolve().parent / tool), *extra],
+                    check=False,
+                )
+            except OSError as e:
+                print(f"   ({tool} did not run: {e})")
+        print()
+
     print(f"banked   : {len(banked)}")
     for n in banked:
         print(f"  + {n}")
