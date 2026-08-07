@@ -31,6 +31,10 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+
+class AuthFailed(RuntimeError):
+    """The API rejected the key. Aborts the whole run rather than repeating per function."""
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import pr_linkcheck as _linkcheck  # noqa: E402   the repo's own verification gate
@@ -154,14 +158,29 @@ def verify(c_path, name, row):
     return False, int(m.group(1)) if m else 999, detail
 
 
+def _max_tokens_for(cfg):
+    """Output ceiling. A reasoning model spends its hidden thinking INSIDE this limit, so the flat
+    4096 that used to be hardcoded here starves it: the reasoning consumes the whole budget and the
+    reply is cut off before the code block ever starts, which then reads as "no code block
+    returned". sm64ds's driver learned this the expensive way (130k output tokens, 0 landed) and
+    gives known reasoners real headroom - they only bill what they use."""
+    m = (cfg.get("model") or "").lower()
+    reasoner = "reason" in m or "nemo" in m or re.match(r"^(gpt-5|o[1-4])", m)
+    return int(os.environ.get("GLM_MAX_OUTPUT_TOKENS", "24000" if reasoner else "8000"))
+
+
 def call_model(messages, cfg):
-    """One API round-trip. Returns (text, tokens_in, tokens_out)."""
+    """One API round-trip. Returns (text, tokens_in, tokens_out).
+
+    Raises AuthFailed on 401/403 and Throttled on 429/5xx so the caller can react differently to
+    "your key is wrong" (stop) and "slow down" (retry) instead of scoring both as a failed match.
+    """
     if cfg["dialect"] == "openai":
         url = cfg["base"].rstrip("/") + "/v1/chat/completions"
         body = {
             "model": cfg["model"],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
-            "max_tokens": 4096,
+            "max_tokens": _max_tokens_for(cfg),
         }
         headers = {"Authorization": f"Bearer {cfg['key']}", "Content-Type": "application/json"}
     else:
@@ -170,7 +189,7 @@ def call_model(messages, cfg):
             "model": cfg["model"],
             "system": SYSTEM,
             "messages": messages,
-            "max_tokens": 4096,
+            "max_tokens": _max_tokens_for(cfg),
         }
         headers = {
             "x-api-key": cfg["key"],
@@ -181,14 +200,20 @@ def call_model(messages, cfg):
     with urllib.request.urlopen(req, timeout=cfg["timeout"]) as resp:
         data = json.loads(resp.read().decode("utf-8"))
 
+    # finish_reason / stop_reason travels with the text. An empty reply that stopped on "length"
+    # was CUT OFF, not silent, and the two need opposite responses - nagging a truncated model for
+    # a code block at the same ceiling just buys the same truncation.
     if cfg["dialect"] == "openai":
-        text = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+        ch = (data.get("choices") or [{}])[0]
+        text = ch.get("message", {}).get("content") or ""
         usage = data.get("usage") or {}
-        return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        return (text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0),
+                ch.get("finish_reason"))
     parts = data.get("content") or []
     text = "".join(p.get("text", "") for p in parts if p.get("type") == "text")
     usage = data.get("usage") or {}
-    return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+    return (text, usage.get("input_tokens", 0), usage.get("output_tokens", 0),
+            data.get("stop_reason"))
 
 
 CODE_RE = re.compile(r"```(?:c\+\+|cpp|c)?\s*\n(.*?)```", re.S)
@@ -239,8 +264,15 @@ def work_one(row, cfg, attempts, live=False):
         if live:
             log(f"    {name} {msg}")
 
+    draft = row.get("draft")
     if live:  # immediate feedback: which function is being worked, before the slow model call
-        log(f"-> {name}: writing from scratch with {cfg['model']} (up to {attempts} attempts)...")
+        if draft:
+            d = row.get("divergences")
+            log(f"-> {name}: refining a parked draft"
+                + (f" (currently {d} word(s) off)" if d is not None else "")
+                + f" with {cfg['model']} (up to {attempts} attempts)...")
+        else:
+            log(f"-> {name}: writing from scratch with {cfg['model']} (up to {attempts} attempts)...")
     mode = row.get("mode")
     listing = disasm(row["module"], str(row["addr"]), size, (mode == "thumb"))
     # Tell it what it is compiling for. None of this was in the prompt before: the model was
@@ -278,7 +310,17 @@ def work_one(row, cfg, attempts, live=False):
     levers = _lever_block(mode)
     if levers:
         prompt.append("\n" + levers)
-    prompt.append("\nWrite the C that rebuilds this function byte for byte.")
+    if draft:
+        d = row.get("divergences")
+        prompt.append(
+            "\nA previous attempt got this close and is PARKED as a near-miss"
+            + (f" - {d} word(s) still differ from the ROM" if d is not None else "")
+            + ". Start from it and fix the remaining codegen SHAPE; do not rewrite it from "
+              "scratch, and do not change semantics unless the diff proves them wrong:\n" + draft
+        )
+        prompt.append("\nReturn the improved complete source file.")
+    else:
+        prompt.append("\nWrite the C that rebuilds this function byte for byte.")
     messages = [{"role": "user", "content": "\n".join(prompt)}]
 
     tin = tout = 0
@@ -287,9 +329,16 @@ def work_one(row, cfg, attempts, live=False):
     last_detail = ""
     for attempt in range(1, attempts + 1):
         try:
-            text, a, b = call_model(messages, cfg)
+            text, a, b, finish = call_model(messages, cfg)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
+            # A rejected key is not a property of this function, so reporting it as div=999 and
+            # moving to the next target is wrong twice: it buries the real cause behind a number
+            # that means "the C did not match", and it re-asks a question already answered for
+            # every remaining function. A 401/403 will not fix itself between calls. Raise so the
+            # run stops and SAYS what happened.
+            if e.code in (401, 403):
+                raise AuthFailed(f"HTTP {e.code}: {detail}")
             return {"name": name, "matched": False, "divergences": 999, "attempts": attempt,
                     "c_source": None, "note": f"HTTP {e.code}: {detail}", "log": att_log,
                     "orig_div": None}, tin, tout
@@ -301,6 +350,16 @@ def work_one(row, cfg, attempts, live=False):
         tout += b
         code = extract_code(text)
         if not code:
+            # This used to be a bare `continue` - an empty reply burned an attempt with no log line
+            # at all. Two very different causes need saying apart: a reply cut off at the token
+            # ceiling (the reasoner spent its whole budget thinking) versus a model that genuinely
+            # returned nothing. Retrying a cut-off at the same ceiling truncates identically, so
+            # stop rather than spend the remaining attempts on it.
+            if finish in ("length", "max_tokens"):
+                note_attempt(f"attempt {attempt}: cut off at the {_max_tokens_for(cfg)}-token "
+                             f"ceiling before writing any code - raise GLM_MAX_OUTPUT_TOKENS")
+                break
+            note_attempt(f"attempt {attempt}: no code block returned")
             continue
         code = with_header(code, name, row)
         ext = "cpp" if code.lstrip().startswith("//cpp") else "c"
@@ -398,7 +457,17 @@ def main():
         # as_completed, not map: map yields in submission order, so one slow target holds back every
         # result behind it and the viewer's bar sits at zero while work is actually finishing.
         for f in as_completed(futs):
-            res, i_tok, o_tok = f.result()
+            try:
+                res, i_tok, o_tok = f.result()
+            except AuthFailed as e:
+                for other in futs:
+                    other.cancel()
+                sys.exit(
+                    f"\nauthentication failed - the API rejected the key, so nothing was attempted.\n"
+                    f"  {e}\n"
+                    f"Fix the key for this agent in Console's vault (GLM_API_KEY) and re-run. "
+                    f"No targets were consumed and nothing was banked."
+                )
             tin += i_tok
             tout += o_tok
             results.append(res)

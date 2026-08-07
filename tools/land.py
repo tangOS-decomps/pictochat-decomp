@@ -145,7 +145,35 @@ def main():
             # re-verify exists for; say so loudly rather than banking it.
             rejected.append((name, detail))
         else:
-            parked.append(name)
+            # ACTUALLY park it. This branch used to only append to a list, while the module
+            # docstring ("near-misses parked as drafts") and the "kept as drafts" summary line
+            # both claimed the draft had been saved. Nothing wrote it anywhere - no src file, no
+            # nonmatching.jsonl - so every close attempt this tool ever saw was reported as kept
+            # and silently dropped. That is precisely what the never-discard-a-close-attempt rule
+            # exists to prevent, and it cost two div=3 drafts on 2026-08-07.
+            if args.dry_run:
+                parked.append(name)
+                continue
+            draft = REPO / "extracted" / "_land" / f"{name}.{ext}"
+            draft.parent.mkdir(parents=True, exist_ok=True)
+            draft.write_text(c_source, encoding="utf-8")
+            try:
+                p = subprocess.run(
+                    [sys.executable, str(REPO / "tools" / "nonmatching.py"), "add",
+                     "--c", str(draft), "--func", name, "--module", row["module"],
+                     "--addr", str(row["addr"]), "--size", str(row["size"]),
+                     "--reason", (f"drive near-miss: {detail or 'compiles, does not match'}")[:200]],
+                    capture_output=True, text=True, check=False,
+                )
+                if p.returncode == 0:
+                    parked.append(name)
+                else:
+                    # Loud, not silent: a refused park is still a lost draft unless someone sees it.
+                    skipped.append((name, f"PARK FAILED: {(p.stderr or p.stdout).strip()[:140]}"))
+            except OSError as e:
+                skipped.append((name, f"PARK FAILED: {e}"))
+            finally:
+                draft.unlink(missing_ok=True)
 
     # The free tier, the way sm64ds's crackloop land does it (crackloop.py runs clone then
     # paramclone here). A function just banked is new material for the pattern tools - it can
@@ -178,7 +206,13 @@ def main():
     if parked:
         print(f"near-miss: {len(parked)} (kept as drafts, not matched)")
     if skipped:
+        # With reasons. A bare count hides the difference between "already done, nothing to do"
+        # and "the draft could not be parked and is gone" - and the second is the one that costs
+        # real work, so it must never be summarised into a number.
         print(f"skipped  : {len(skipped)}")
+        for s in skipped:
+            n, why = s if isinstance(s, tuple) else (s, "")
+            print(f"  - {n}{f'  ({why})' if why else ''}")
 
     # Non-zero when the driver claimed matches that do not reproduce, so a caller notices.
     return 1 if rejected else 0
