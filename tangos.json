@@ -7,7 +7,7 @@
     "github": "https://github.com/tangOS-decomps/pictochat-decomp",
     "language": "C",
     "platform": "nds",
-    "compiler": "mwccarm (CodeWarrior for embedded ARM), a dsi/ build - version NOT yet pinned. Sweep the dsi builds (dsi/1.1, 1.1p1, 1.2, 1.2p1, 1.2p2, 1.3, 1.3p1, 1.6sp1, 1.6sp2); dsi/1.3 is the working guess for a 2009 launch-window system title. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
+    "compiler": "mwccarm (CodeWarrior for embedded ARM), the 2.0/ family - PINNED 2026-08-04 by byte evidence; canonical is 2.0/sp1 (tools/match.py CANONICAL). Do NOT sweep the dsi/ builds or restore a dsi pin: across the banked corpus 156 functions compile identically under both families, 3 match under 2.0/* only, and 0 match under dsi/* only - dsi/* is structurally incapable of three of them. The old dsi/1.3 guess was a plausibility argument from the DSi release date, never verified. Evidence in notes/setup-mwccarm.md. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
     "cppNote": "If a name starts with _Z (C++ mangled), write C++ with the FIRST LINE exactly //cpp - the build compiles a src file as C++ when its first line is //cpp, else as c99.",
     "setup": "clone {github} and follow CONTRIBUTING.md. You bring your own dumps (nothing copyrighted is in the repo): your own DSi PictoChat title (assets/pictochat.nds) and your own ARM7 BIOS (assets/bios7.bin). Set up mwccarm (a dsi build) per notes/setup-mwccarm.md, `pip install ndspy capstone pyelftools pyghidra`, then `python tools/extract_pictochat.py` to populate extracted/.",
     "verifyCommand": "python tools/match.py --c yourfile.c --func {name} --addr 0x{addrHex} --size 0x{sizeHex} --module {module} --trio",
@@ -22,9 +22,15 @@
       "nonMatching": "tools/nonmatching.py parks logic-correct, not-byte-exact drafts with a `// NONMATCHING:` marker",
       "crossProject": "tools/cross_match.py --other-repo ../sm64ds-decomp",
       "drafts": "tools/ghidra_draft.py, tools/m2c_draft.py, tools/permuter/",
-      "canonicalVersion": "dsi/1.3 (unconfirmed)"
+      "canonicalVersion": "2.0/sp1"
     },
-    "modules": ["main", "itcm", "unk_autoload_0", "unk_autoload_2", "arm7"],
+    "modules": [
+      "main",
+      "itcm",
+      "unk_autoload_0",
+      "unk_autoload_2",
+      "arm7"
+    ],
     "progressNote": "Matched function COUNT is computable from committed src/ alone; the TOTAL count and percentage come from Ghidra's function estimate (extracted/, git-ignored, ROM-derived), so a precise percentage needs a local extracted/ - see notes/pictochat-layout.md. dsd's own function search does not finish for this title."
   },
   "runtime": {
@@ -44,5 +50,868 @@
         "note": "Only if you drive the model-assisted draft tools (tools/m2c_draft.py, tools/ghidra_draft.py, the permuter loop) over the API instead of from an editor session."
       }
     }
-  }
+  },
+  "data": {
+    "generate": "{python} tools/chaos_db_ci.py --out {out}",
+    "dbPath": "chaos-db.json",
+    "committedDbUrl": "https://raw.githubusercontent.com/tangOS-decomps/pictochat-decomp/chaos-data/chaos-db.json"
+  },
+  "categories": [
+    {
+      "id": "reporting",
+      "label": "Progress & Reporting",
+      "order": 1,
+      "description": "Read-only status: how much of the title is matched."
+    },
+    {
+      "id": "analysis",
+      "label": "Analysis & Debugging",
+      "order": 2,
+      "description": "Disassemble, diff a candidate against the ROM, hunt the compiler version."
+    },
+    {
+      "id": "matching",
+      "label": "Matching & Cracking",
+      "order": 3,
+      "description": "Free tiers and search loops that produce byte-exact candidates."
+    },
+    {
+      "id": "nearmiss",
+      "label": "Near-miss & Drafts",
+      "order": 4,
+      "description": "Scaffolds to start from, and somewhere to park a close draft."
+    },
+    {
+      "id": "verification",
+      "label": "Verification",
+      "order": 5,
+      "description": "Prove committed sources really reproduce the ROM."
+    },
+    {
+      "id": "setup",
+      "label": "Setup",
+      "order": 6,
+      "description": "Toolchain checks and ROM extraction."
+    }
+  ],
+  "console": {
+    "scheduler": "schedule",
+    "refineScheduler": "schedule",
+    "randomScheduler": "schedule",
+    "enrich": "schedule",
+    "verify": "match",
+    "driver": "drive",
+    "land": "land"
+  },
+  "tools": [
+    {
+      "id": "schedule",
+      "label": "Pick next targets",
+      "category": "reporting",
+      "readOnly": true,
+      "command": "{python} tools/schedule.py {flags}",
+      "description": "Choose the next functions to attack and write them as a worklist. Smallest-first by default, since short functions land more work per unit of effort. Reads the Ghidra export when extracted/ is present (rows then carry ROM bytes), else the committed chaos-db.json, so targets can be picked before anything is extracted. Never offers a function that is already matched or parked.",
+      "args": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "flag": "--limit",
+          "description": "How many targets to return."
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "flag": "--out",
+          "description": "Write JSONL here instead of stdout."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "min",
+          "type": "string",
+          "flag": "--min",
+          "description": "Smallest function size to offer."
+        },
+        {
+          "name": "max",
+          "type": "string",
+          "flag": "--max",
+          "description": "Largest function size to offer."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Pin ONE function by address, ignoring the size filters. This is the enrich path."
+        },
+        {
+          "name": "random",
+          "type": "boolean",
+          "flag": "--random",
+          "description": "Shuffle instead of smallest-first, so each run re-rolls a fresh set."
+        },
+        {
+          "name": "include_attempted",
+          "type": "boolean",
+          "flag": "--include-attempted",
+          "description": "Offer functions parked as nonmatching - the ones that already carry a draft to improve. The refine pass."
+        }
+      ]
+    },
+    {
+      "id": "progress",
+      "label": "Progress report",
+      "category": "reporting",
+      "readOnly": true,
+      "command": "{python} tools/progress.py {flags}",
+      "description": "How much of the title is matched, in functions and bytes. The total is Ghidra's function estimate rather than dsd's - see notes/pictochat-layout.md.",
+      "args": [
+        {
+          "name": "bar",
+          "type": "boolean",
+          "flag": "--bar",
+          "description": "Print just the README progress block."
+        }
+      ]
+    },
+    {
+      "id": "sync_ledger",
+      "label": "Sync the ledger",
+      "category": "reporting",
+      "readOnly": false,
+      "command": "{python} tools/sync_ledger.py {flags}",
+      "description": "Catch the matched-function ledger up with what is committed in src/, by reading each file's decomp marker.",
+      "args": [
+        {
+          "name": "apply",
+          "type": "boolean",
+          "flag": "--apply",
+          "description": "Write progress/matched.jsonl rather than only reporting."
+        }
+      ]
+    },
+    {
+      "id": "chaos_db",
+      "label": "Rebuild atlas data",
+      "category": "reporting",
+      "readOnly": false,
+      "command": "{python} tools/chaos_db_ci.py --out {out}",
+      "description": "Regenerate chaos-db.json, the progress data the Chaos Viewer reads.",
+      "args": [
+        {
+          "name": "out",
+          "type": "string",
+          "description": "Output path (chaos-db.json)."
+        }
+      ]
+    },
+    {
+      "id": "disasm",
+      "label": "Disassemble",
+      "category": "analysis",
+      "readOnly": true,
+      "command": "{python} tools/disasm.py {flags}",
+      "description": "Disassemble ROM bytes at an address, resolving pc-relative pool loads. Where you start when reading a function you are about to write.",
+      "args": [
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "RAM address to start at."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "length",
+          "type": "string",
+          "flag": "--length",
+          "description": "Bytes to disassemble (default 0x100)."
+        },
+        {
+          "name": "toNext",
+          "type": "boolean",
+          "flag": "--to-next",
+          "description": "Run to the next known function's start."
+        },
+        {
+          "name": "thumb",
+          "type": "boolean",
+          "flag": "--thumb",
+          "description": "Decode as Thumb rather than ARM."
+        }
+      ]
+    },
+    {
+      "id": "fdiff",
+      "label": "Diff candidate vs ROM",
+      "category": "analysis",
+      "readOnly": true,
+      "command": "{python} tools/fdiff.py {flags}",
+      "description": "Instruction-level diff of a candidate against the ROM. What to reach for when match says no: it shows WHERE it diverges.",
+      "args": [
+        {
+          "name": "c",
+          "type": "string",
+          "flag": "--c",
+          "description": "Path to the candidate C/C++ file."
+        },
+        {
+          "name": "func",
+          "type": "string",
+          "flag": "--func",
+          "description": "Symbol name."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address."
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "flag": "--size",
+          "description": "Function size in bytes."
+        },
+        {
+          "name": "align",
+          "type": "boolean",
+          "flag": "--align",
+          "description": "Align the streams to separate real differences from drift."
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "flag": "--compact",
+          "description": "Collapse long identical runs."
+        }
+      ]
+    },
+    {
+      "id": "probe_versions",
+      "label": "Probe compiler versions",
+      "category": "analysis",
+      "readOnly": true,
+      "command": "{python} tools/probe_versions.py {flags}",
+      "description": "Compile one candidate across mwccarm builds to see which produce the ROM's bytes. This title's compiler version is NOT pinned yet, so this is how it gets narrowed down.",
+      "args": [
+        {
+          "name": "c",
+          "type": "string",
+          "flag": "--c",
+          "description": "Path to the candidate C/C++ file."
+        },
+        {
+          "name": "versions",
+          "type": "string",
+          "flag": "--versions",
+          "description": "Comma-separated versions to try."
+        },
+        {
+          "name": "flags",
+          "type": "string",
+          "flag": "--flags",
+          "description": "Override the compiler flags."
+        }
+      ]
+    },
+    {
+      "id": "match_advisor",
+      "label": "Match advisor",
+      "category": "analysis",
+      "readOnly": true,
+      "command": "{python} tools/match_advisor.py {flags}",
+      "description": "Read a candidate and suggest what to change to close the gap.",
+      "args": [
+        {
+          "name": "c",
+          "type": "string",
+          "flag": "--c",
+          "description": "Path to the candidate C/C++ file."
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "flag": "--version",
+          "description": "Compiler version to advise against."
+        },
+        {
+          "name": "sweep",
+          "type": "boolean",
+          "flag": "--sweep",
+          "description": "Also report which pinned builds match."
+        }
+      ]
+    },
+    {
+      "id": "cross_reference",
+      "label": "Search other decomps",
+      "category": "analysis",
+      "readOnly": true,
+      "command": "{python} tools/cross_reference.py {sub}",
+      "description": "Scrape and search other NDS decomps for patterns, including full-text search of their own notes on this toolchain's quirks. Often the fastest answer to a codegen question somebody else already solved.",
+      "args": [
+        {
+          "name": "sub",
+          "type": "string",
+          "description": "scrape, search, cross-match, info or notes."
+        }
+      ]
+    },
+    {
+      "id": "match",
+      "label": "Verify a match",
+      "category": "matching",
+      "readOnly": true,
+      "command": "{python} tools/match.py {flags}",
+      "description": "THE merge gate: compile a candidate and compare it byte-for-byte with the ROM. Green here is the only thing that counts as matched.",
+      "args": [
+        {
+          "name": "c",
+          "type": "string",
+          "flag": "--c",
+          "description": "Path to the candidate C/C++ file."
+        },
+        {
+          "name": "func",
+          "type": "string",
+          "flag": "--func",
+          "description": "Symbol name being matched."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address, e.g. 0x02000c00."
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "flag": "--size",
+          "description": "Function size in bytes, e.g. 0x80."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "trio",
+          "type": "boolean",
+          "flag": "--trio",
+          "description": "Sweep the dsi/ builds - the compiler version is not pinned yet."
+        },
+        {
+          "name": "brief",
+          "type": "boolean",
+          "flag": "--brief",
+          "description": "Terse per-version pass/fail."
+        },
+        {
+          "name": "flags",
+          "type": "string",
+          "flag": "--flags",
+          "description": "Override the compiler flags for this function."
+        }
+      ]
+    },
+    {
+      "id": "cross_match",
+      "label": "Cross-project match",
+      "category": "matching",
+      "readOnly": true,
+      "command": "{python} tools/cross_match.py {flags}",
+      "description": "Find functions already matched in another decomp that byte-match here. Has landed dozens with no hand-writing - try it before anything else.",
+      "args": [
+        {
+          "name": "otherRepo",
+          "type": "string",
+          "flag": "--other-repo",
+          "description": "Path to the other decomp, e.g. ../sm64ds-decomp."
+        },
+        {
+          "name": "minFuzzy",
+          "type": "string",
+          "flag": "--min-fuzzy",
+          "description": "Minimum structural similarity to report a non-identical candidate."
+        }
+      ]
+    },
+    {
+      "id": "templates",
+      "label": "Template sweep",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/templates.py {flags}",
+      "description": "Try known codegen templates against unmatched functions in a size range. A free tier: it costs compiles, not thinking.",
+      "args": [
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "min",
+          "type": "string",
+          "flag": "--min",
+          "description": "Smallest function size to try."
+        },
+        {
+          "name": "max",
+          "type": "string",
+          "flag": "--max",
+          "description": "Largest function size to try."
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "flag": "--mode",
+          "description": "arm or thumb."
+        },
+        {
+          "name": "apply",
+          "type": "boolean",
+          "flag": "--apply",
+          "description": "Bank the wins rather than only reporting them."
+        },
+        {
+          "name": "extend",
+          "type": "string",
+          "flag": "--extend",
+          "description": "Retry past Ghidra's cached size by up to this many bytes, catching a trailing literal pool its boundary excluded."
+        }
+      ]
+    },
+    {
+      "id": "twin",
+      "label": "Twin search",
+      "category": "matching",
+      "readOnly": true,
+      "command": "{python} tools/twin.py {flags}",
+      "description": "Find an already-matched function with the same instruction skeleton and reuse its shape. --relax casts wider, since a wrong guess only costs one compile.",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "flag": "--name",
+          "description": "Target function name."
+        },
+        {
+          "name": "limit",
+          "type": "string",
+          "flag": "--limit",
+          "description": "Cap how many targets to work through."
+        },
+        {
+          "name": "relax",
+          "type": "boolean",
+          "flag": "--relax",
+          "description": "Compare normalised mnemonics and verify every twin."
+        },
+        {
+          "name": "tries",
+          "type": "string",
+          "flag": "--tries",
+          "description": "With --relax, most twins to try per target."
+        }
+      ]
+    },
+    {
+      "id": "find_duplicates",
+      "label": "Find duplicate functions",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/find_duplicates.py {flags}",
+      "description": "Find unmatched functions byte-identical to ones already matched. Free matches; dry-run unless --apply.",
+      "args": [
+        {
+          "name": "apply",
+          "type": "boolean",
+          "flag": "--apply",
+          "description": "Bank the free matches."
+        }
+      ]
+    },
+    {
+      "id": "csweep",
+      "label": "Sweep candidate shapes",
+      "category": "matching",
+      "readOnly": true,
+      "command": "{python} tools/csweep.py {flags}",
+      "description": "Generate and score many C shapes for one function, reporting the closest.",
+      "args": [
+        {
+          "name": "spec",
+          "type": "string",
+          "description": "The sweep spec to run."
+        },
+        {
+          "name": "top",
+          "type": "string",
+          "flag": "--top",
+          "description": "How many of the best candidates to report."
+        },
+        {
+          "name": "keepDir",
+          "type": "string",
+          "flag": "--keep-dir",
+          "description": "Write every generated candidate here."
+        }
+      ]
+    },
+    {
+      "id": "frame_search",
+      "label": "Frame search",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/frame_search.py {flags}",
+      "description": "Take a seed C file marked up with choice points and search the combinations for a match.",
+      "args": [
+        {
+          "name": "seed",
+          "type": "string",
+          "flag": "--seed",
+          "description": "Seed C file carrying the choice-point markers."
+        },
+        {
+          "name": "func",
+          "type": "string",
+          "flag": "--func",
+          "description": "Symbol name."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address."
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "flag": "--size",
+          "description": "Function size in bytes."
+        },
+        {
+          "name": "limit",
+          "type": "string",
+          "flag": "--limit",
+          "description": "Cap combinations tried (0 = unlimited)."
+        },
+        {
+          "name": "keep",
+          "type": "string",
+          "flag": "--keep",
+          "description": "How many best candidates to save."
+        }
+      ]
+    },
+    {
+      "id": "declorder_search",
+      "label": "Declaration-order search",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/declorder_search.py {flags}",
+      "description": "Permute the order of local declarations, one of the few levers that actually moves register allocation on this compiler.",
+      "args": [
+        {
+          "name": "c",
+          "type": "string",
+          "flag": "--c",
+          "description": "Path to the candidate file."
+        },
+        {
+          "name": "func",
+          "type": "string",
+          "flag": "--func",
+          "description": "Symbol name."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address."
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "flag": "--size",
+          "description": "Function size in bytes."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "flag": "--version",
+          "description": "Compiler version to build with."
+        },
+        {
+          "name": "maxCompiles",
+          "type": "string",
+          "flag": "--max-compiles",
+          "description": "Cap how many orderings to compile."
+        }
+      ]
+    },
+    {
+      "id": "pattern_matcher",
+      "label": "Pattern matcher",
+      "category": "matching",
+      "readOnly": true,
+      "command": "{python} tools/advanced_pattern_matcher.py {sub}",
+      "description": "Analyze the largest unmatched functions, find fuzzy assembly matches for an address, or scaffold drafts.",
+      "args": [
+        {
+          "name": "sub",
+          "type": "string",
+          "description": "analyze, match or generate-drafts."
+        }
+      ]
+    },
+    {
+      "id": "nonmatching",
+      "label": "Park a near-miss",
+      "category": "nearmiss",
+      "readOnly": false,
+      "command": "{python} tools/nonmatching.py {sub}",
+      "description": "Park a logic-correct but not byte-exact draft with a NONMATCHING marker. It does not count as matched and must never be presented as one, but it is the best starting point for a later match.",
+      "args": [
+        {
+          "name": "sub",
+          "type": "string",
+          "description": "add or stats."
+        }
+      ]
+    },
+    {
+      "id": "ghidra_draft",
+      "label": "Ghidra draft",
+      "category": "nearmiss",
+      "readOnly": false,
+      "command": "{python} tools/ghidra_draft.py {flags}",
+      "description": "Generate a Ghidra decompilation scaffold for a function. A structure hint to start from - never bank one as-is.",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "flag": "--name",
+          "description": "Function name."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address."
+        }
+      ]
+    },
+    {
+      "id": "m2c_draft",
+      "label": "m2c draft",
+      "category": "nearmiss",
+      "readOnly": false,
+      "command": "{python} tools/m2c_draft.py {flags}",
+      "description": "Generate an m2c decompilation scaffold. Same rule as the Ghidra one: a starting shape, not a match.",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "flag": "--name",
+          "description": "Function name."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Function address."
+        },
+        {
+          "name": "dumpAsm",
+          "type": "boolean",
+          "flag": "--dump-asm",
+          "description": "Also print the generated GAS asm."
+        }
+      ]
+    },
+    {
+      "id": "pr_linkcheck",
+      "label": "Verify committed sources",
+      "category": "verification",
+      "readOnly": true,
+      "command": "{python} tools/pr_linkcheck.py {flags}",
+      "description": "Recompile the sources a PR touches, resolving each symbol from the file's own decomp header, and byte-compare against the ROM with relocation slots wildcarded.",
+      "args": [
+        {
+          "name": "base",
+          "type": "string",
+          "flag": "--base",
+          "description": "Base ref to diff against."
+        },
+        {
+          "name": "pr",
+          "type": "string",
+          "flag": "--pr",
+          "description": "PR number."
+        },
+        {
+          "name": "fail",
+          "type": "boolean",
+          "flag": "--fail",
+          "description": "Exit non-zero when anything fails to reproduce."
+        }
+      ]
+    },
+    {
+      "id": "check_toolchain",
+      "label": "Check the toolchain",
+      "category": "setup",
+      "readOnly": true,
+      "command": "{python} tools/check_toolchain.py {flags}",
+      "description": "Confirm mwccarm and the python dependencies are present and usable.",
+      "args": [
+        {
+          "name": "json",
+          "type": "boolean",
+          "flag": "--json",
+          "description": "Machine-readable output."
+        }
+      ]
+    },
+    {
+      "id": "extract",
+      "label": "Extract the ROM",
+      "category": "setup",
+      "readOnly": false,
+      "command": "{python} tools/extract_pictochat.py",
+      "description": "Populate extracted/ from your own legally dumped DSi PictoChat title and ARM7 BIOS. Nothing ROM-derived is ever committed."
+    },
+    {
+      "id": "drive",
+      "label": "Drive a worklist",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/drive.py {flags}",
+      "description": "Work a worklist with an LLM over an API key: show it the disassembly and target bytes, compile what it writes, byte-check it, and feed the instruction diff back on a miss. Banks nothing - land.py re-verifies every claim before anything reaches src/. Reads GLM_API_KEY, GLM_BASE_URL, GLM_MODEL and GLM_DIALECT from the environment.",
+      "args": [
+        {
+          "name": "wl",
+          "type": "string",
+          "description": "Worklist JSONL to work through.",
+          "flag": "--wl"
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "description": "Where to write the results JSON.",
+          "flag": "--out"
+        },
+        {
+          "name": "jobs",
+          "type": "integer",
+          "flag": "--jobs",
+          "description": "Targets in flight at once."
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "flag": "--attempts",
+          "description": "Tries per function before moving on."
+        }
+      ]
+    },
+    {
+      "id": "land",
+      "label": "Land a drive's results",
+      "category": "matching",
+      "readOnly": false,
+      "command": "{python} tools/land.py {flags}",
+      "description": "Bank a finished drive. Every candidate the driver claims to have matched is RE-VERIFIED here against the ROM before it reaches src/ - nothing is trusted on the driver's say-so - and anything that compiles but does not match is parked as a draft rather than dropped.",
+      "args": [
+        {
+          "name": "out",
+          "type": "string",
+          "description": "The driver's results JSON.",
+          "flag": "--output"
+        },
+        {
+          "name": "wl",
+          "type": "string",
+          "description": "The worklist the drive ran.",
+          "flag": "--wl"
+        },
+        {
+          "name": "no_claims",
+          "type": "boolean",
+          "flag": "--no-claims",
+          "description": "Accepted for compatibility; this repo has no claims board."
+        },
+        {
+          "name": "dry_run",
+          "type": "boolean",
+          "flag": "--dry-run",
+          "description": "Verify and report, bank nothing."
+        }
+      ]
+    },
+    {
+      "id": "funcs_cache",
+      "label": "Build the function cache",
+      "category": "setup",
+      "readOnly": false,
+      "command": "{python} tools/build_funcs_cache.py {flags}",
+      "description": "Join the Ghidra function metadata export with the extracted ROM to produce extracted/pictochat_funcs.json, which is what gives worklist rows their real pool-inclusive sizes and target bytes.",
+      "args": [
+        {
+          "name": "metadata",
+          "type": "string",
+          "description": "The Ghidra function metadata export (JSON list).",
+          "flag": "--metadata"
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "flag": "--out",
+          "description": "Output path."
+        }
+      ]
+    }
+  ]
 }
