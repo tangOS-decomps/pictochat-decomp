@@ -9,7 +9,7 @@
     "platform": "nds",
     "compiler": "mwccarm (CodeWarrior for embedded ARM), the 2.0/ family - PINNED 2026-08-04 by byte evidence; canonical is 2.0/sp1 (tools/match.py CANONICAL). Do NOT sweep the dsi/ builds or restore a dsi pin: across the banked corpus 156 functions compile identically under both families, 3 match under 2.0/* only, and 0 match under dsi/* only - dsi/* is structurally incapable of three of them. The old dsi/1.3 guess was a plausibility argument from the DSi release date, never verified. Evidence in notes/setup-mwccarm.md. Flags (ARM9): -O4,p -enum int -lang c99 -char signed -interworking -thumb -proc arm946e -gccext,on -msgstyle gcc -Iinclude. ARM7: same but -proc arm7tdmi. -thumb is confirmed necessary (mwccarm otherwise emits ARM-mode even for tiny leaf funcs the ROM has as Thumb); override per-function with --flags if a candidate comes out the wrong size.",
     "cppNote": "If a name starts with _Z (C++ mangled), write C++ with the FIRST LINE exactly //cpp - the build compiles a src file as C++ when its first line is //cpp, else as c99.",
-    "setup": "clone {github} and follow CONTRIBUTING.md. You bring your own dumps (nothing copyrighted is in the repo): your own DSi PictoChat title (assets/pictochat.nds) and your own ARM7 BIOS (assets/bios7.bin). Set up mwccarm (a dsi build) per notes/setup-mwccarm.md, `pip install ndspy capstone pyelftools pyghidra`, then `python tools/extract_pictochat.py` to populate extracted/.",
+    "setup": "clone {github} and follow CONTRIBUTING.md. You bring your own dumps (nothing copyrighted is in the repo): your own DSi PictoChat title (assets/pictochat.nds) and your own ARM7 BIOS (assets/bios7.bin). Set up mwccarm (2.0/sp1, the canonical build) per notes/setup-mwccarm.md, `pip install ndspy capstone pyelftools pyghidra`, then `python tools/extract_pictochat.py` to populate extracted/.",
     "verifyCommand": "python tools/match.py --c yourfile.c --func {name} --addr 0x{addrHex} --size 0x{sizeHex} --module {module} --trio",
     "readFirst": "notes/matching-style.md (matching levers + known walls), notes/tooling.md (the tool suite), and notes/pictochat-layout.md (why the total is Ghidra's estimate, not dsd's). Coordinate your span in CLAIMS.md.",
     "submitting": "Before opening a PR read CONTRIBUTING.md. Every file you add to src/ MUST byte-reproduce the binary (tools/match.py green) - that is the only merge gate. One matched function per src/arm9/<symbol>.c|.cpp or src/arm7/<symbol>.c|.cpp (first line //cpp for C++). Claim your span in CLAIMS.md first. A logic-correct but NOT byte-exact draft is parked with a `// NONMATCHING:` marker via tools/nonmatching.py - it does not count as matched and must not be presented as a match. Before hand-writing anything, try the free tiers: `python tools/sync_ledger.py --apply` then `python tools/cross_match.py --other-repo ../sm64ds-decomp` (cross-project + template matching has already landed dozens with no hand-writing).",
@@ -461,7 +461,7 @@
           "name": "trio",
           "type": "boolean",
           "flag": "--trio",
-          "description": "Sweep the dsi/ builds - the compiler version is not pinned yet."
+          "description": "Sweep the pinned 2.0/* builds (2.0/base excluded, ruled out by byte evidence)."
         },
         {
           "name": "brief",

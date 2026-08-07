@@ -9,8 +9,11 @@ knowledge base - separate from
 mining that file for applicable levers and testing them against this project's own
 targets, not by independent discovery - credit and cross-reference accordingly.
 
-Toolchain here: `dsi/1.3` is the pinned canonical version (see `tools/match.py`'s
-`CANONICAL`), default flags `-O4,p -enum int -lang c99 -char signed -interworking
+Toolchain here: `2.0/sp1` is the pinned canonical version (see `tools/match.py`'s
+`CANONICAL`; the `2.0/*` family was settled by byte evidence on 2026-08-04, replacing
+an earlier unverified `dsi/1.3` guess - sections below written before that date still
+discuss `dsi/*` as canonical and are kept as a dated record, not current guidance),
+default flags `-O4,p -enum int -lang c99 -char signed -interworking
 -thumb -proc arm7tdmi -gccext,on -msgstyle gcc` for arm7 (`DEFAULT_FLAGS_ARM7`), with
 `-O4,s` as a documented, frequently-necessary alternate (`-O4,s` fixes duplicated
 early-return epilogues that `-O4,p` doesn't - see notes/tooling.md's own section on

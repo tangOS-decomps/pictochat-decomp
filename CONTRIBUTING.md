@@ -76,7 +76,7 @@ See [notes/tooling.md](notes/tooling.md) for what each tool does and
 4. **Compile + byte-diff**, relocation-aware:
    ```
    python tools/match.py --c yourfile.c --func name --addr 0x0232... --size 0x.. \
-       --module unk_autoload_0 --version dsi/1.3
+       --module unk_autoload_0 --version 2.0/sp1
    ```
    A match means every instruction word and every relocation slot lines up.
    If it's close but not quite there, `tools/fdiff.py` always shows the full
@@ -84,12 +84,16 @@ See [notes/tooling.md](notes/tooling.md) for what each tool does and
    register (permuter-fixable) versus a real logic difference. If a
    near-right candidate's only problem is register coloring or instruction
    order, decomp-permuter finishes it for free - see notes/tooling.md. The
-   compiler version isn't confirmed yet for this title - see
-   [notes/setup-mwccarm.md](notes/setup-mwccarm.md) - so if `dsi/1.3` never
+   compiler family is pinned to `2.0/*` by byte evidence, with `2.0/sp1` as
+   the canonical build - see
+   [notes/setup-mwccarm.md](notes/setup-mwccarm.md) - so if `2.0/sp1` never
    quite lines up on an otherwise-correct-looking function, try `--trio` to
-   sweep the rest of the `dsi/` builds, or `--all` for everything including
-   the (less likely) NTR-era versions. `tools/probe_versions.py` can help pin
-   the real version if you find a construct that discriminates them.
+   sweep the rest of the pinned `2.0/*` builds, or `--all` for everything
+   including the ruled-out `dsi/` and NTR-era versions. `--all` is for
+   diagnosis only: a match found solely outside `2.0/*` is evidence about
+   your source phrasing, not a reason to move the pin.
+   `tools/probe_versions.py` can narrow the exact point release within
+   `2.0/*` if you find a construct that discriminates them.
 5. **Promote** the matched C via `tools/ledger.py` (or just write it to
    `src/arm9/`/`src/arm7/` by hand, following notes/matching-style.md - the
    ledger's `bank()` isn't required, just recommended so

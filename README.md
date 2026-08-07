@@ -89,15 +89,15 @@ The compiler flags follow `sm64ds-decomp`'s for the same compiler family:
 ```
 
 but the **version** is a different story: `sm64ds-decomp` pinned `1.2/sp2p3`
-for a 2004 NTR-SDK game. PictoChat is a DSi system title (DSi launched
-Nov 2008/Apr 2009), so `tools/match.py` instead defaults to `dsi/1.3` - the
-`tools/mwccarm/dsi/` builds self-identify as "Freescale C/C++ for Embedded
-ARM" (Freescale acquired Metrowerks' CodeWarrior division in 2005) with 2009
-copyright dates, a much better fit for a DSi launch-window title. See
-[notes/setup-mwccarm.md](notes/setup-mwccarm.md) for the full reasoning.
-**Neither pin is verified yet** - once a handful of functions are matched,
-sweep versions (`tools/match.py --all`) and pin whichever one actually
-produces byte-identical output.
+for a 2004 NTR-SDK game. This project is pinned to the **`2.0/*` family**,
+with `2.0/sp1` as `tools/match.py`'s canonical build. That pin is settled by
+byte evidence, not by release dates: three banked functions match under
+`2.0/*` and are structurally impossible under `dsi/*`, none match under
+`dsi/*` only, and `2.0/base` is separately ruled out by five more. The
+earlier `dsi/1.3` guess came from the DSi launch window and the `dsi/` builds'
+2009 copyright dates, and was never verified by a match. See
+[notes/setup-mwccarm.md](notes/setup-mwccarm.md) for the full record -
+**do not restore a `dsi/` pin without new byte evidence.**
 
 ## PictoChat's real layout
 
