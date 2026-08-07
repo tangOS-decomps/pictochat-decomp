@@ -325,6 +325,12 @@ def project_block() -> dict:
         # it was built with.
         if url := (desc.get("data") or {}).get("committedDbUrl"):
             block["dataUrl"] = url
+        # This project's live stream on the tangos backend. It carries one thing -- "your CI
+        # just published fresh data" -- so the viewer re-reads dataUrl the moment this file
+        # changes instead of waiting out its poll. Not claimsApi: that one would also hand
+        # this project sm64ds's claims, contributor colours and career counts.
+        if url := (desc.get("data") or {}).get("liveApi"):
+            block["liveApi"] = url
     except Exception as e:
         print(f"  ! tangos.json unreadable ({e}), publishing the minimal project block")
     return block
