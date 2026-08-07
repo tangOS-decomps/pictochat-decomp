@@ -54,7 +54,8 @@
   "data": {
     "generate": "{python} tools/chaos_db_ci.py --out {out}",
     "dbPath": "chaos-db.json",
-    "committedDbUrl": "https://raw.githubusercontent.com/tangOS-decomps/pictochat-decomp/chaos-data/chaos-db.json"
+    "committedDbUrl": "https://raw.githubusercontent.com/tangOS-decomps/pictochat-decomp/chaos-data/chaos-db.json",
+    "liveApi": "https://tangos.dev/api/projects/pictochat"
   },
   "categories": [
     {
