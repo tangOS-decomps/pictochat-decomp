@@ -52,8 +52,36 @@ SYSTEM = (
     "(mwccarm) rebuilds BYTE FOR BYTE. Byte-exact is the only success. Reply with one fenced C "
     "code block and nothing else: no prose, no explanation. Write plain C99 unless the symbol is "
     "C++-mangled, in which case make the FIRST LINE exactly //cpp. Do not invent helper functions "
-    "or headers that do not exist; keep it to what the disassembly shows."
+    "or headers that do not exist; keep it to what the disassembly shows.\n\n"
+    "You are NOT the compiler - do not reason your way to certainty about which instruction your "
+    "C will become. This is guess-and-check: write your single best candidate and submit it. One "
+    "guess actually compiled beats ten argued in your head. END EVERY REPLY WITH A CODE BLOCK; "
+    "never spend a turn on speculation alone. And never write inline asm - it is not a valid "
+    "match and will not compile with these flags."
 )
+
+
+def _lever_block(mode):
+    """Structural levers for this function's ISA, from the shared catalogue.
+
+    The catalogue lives in sm64ds-decomp (the mature one) and is read across a sibling checkout,
+    so a lever proven in either project reaches both instead of living in one repo's notes.
+    Selected by ISA on purpose: most of it was derived on an all-ARM title, so the ARM-only
+    entries are dropped for a Thumb target and the rest arrive marked unproven rather than
+    presented as fact. Absent sibling checkout -> no block, and the driver still runs."""
+    sib = pathlib.Path(os.environ.get("LEVERS_REPO") or (REPO.parent / "sm64ds-decomp"))
+    script = sib / "tools" / "levers.py"
+    if not script.is_file():
+        return ""
+    try:
+        p = subprocess.run(
+            [sys.executable, str(script), "--repo", str(sib),
+             "--arch", "thumb" if mode == "thumb" else "arm", "--format", "prompt"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return (p.stdout or "").strip() if p.returncode == 0 else ""
 
 
 def disasm(module, addr, size, thumb):
@@ -213,10 +241,22 @@ def work_one(row, cfg, attempts, live=False):
 
     if live:  # immediate feedback: which function is being worked, before the slow model call
         log(f"-> {name}: writing from scratch with {cfg['model']} (up to {attempts} attempts)...")
-    listing = disasm(row["module"], str(row["addr"]), size, (row.get("mode") == "thumb"))
+    mode = row.get("mode")
+    listing = disasm(row["module"], str(row["addr"]), size, (mode == "thumb"))
+    # Tell it what it is compiling for. None of this was in the prompt before: the model was
+    # asked to hit a byte-exact target without being told the compiler build, the flags, or
+    # even whether it was writing ARM or Thumb - on a title that is ~70% Thumb.
+    try:
+        import match as _m
+        version = _m.CANONICAL
+        flags = _m.DEFAULT_FLAGS_ARM7 if row["module"] == "arm7" else _m.DEFAULT_FLAGS
+    except Exception:
+        version, flags = "2.0/sp1", ""
     prompt = [
         f"Function: {name}",
-        f"Module: {row['module']}   Address: {row['addr']}   Size: {row['size']}",
+        f"Module: {row['module']}   Address: {row['addr']}   Size: {row['size']}"
+        + (f"   ISA: {mode.upper()}" if mode else ""),
+        f"Compiler: mwccarm {version}" + (f"\nFlags: {flags}" if flags else ""),
     ]
     if row.get("target_hex"):
         prompt.append(f"Target bytes: {row['target_hex']}")
@@ -235,6 +275,9 @@ def work_one(row, cfg, attempts, live=False):
         header = f"\nAlready-matched function with a similar shape ({ex.get('name')}"
         header += f", opcode similarity {sim}):\n" if sim is not None else "):\n"
         prompt.append(header + ex["c_source"])
+    levers = _lever_block(mode)
+    if levers:
+        prompt.append("\n" + levers)
     prompt.append("\nWrite the C that rebuilds this function byte for byte.")
     messages = [{"role": "user", "content": "\n".join(prompt)}]
 
