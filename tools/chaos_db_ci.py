@@ -302,6 +302,34 @@ def match_finishers(rev="HEAD") -> dict[str, str]:
     return finishers
 
 
+# Keys the Chaos Viewer reads off a published project block. Whitelisted rather than
+# copied wholesale: tangos.json also carries modules/matchConventions/progressNote,
+# which every viewer load would then have to download for nothing.
+PROJECT_KEYS = ("name", "title", "tagline", "github", "language", "platform", "compiler",
+                "cppNote", "setup", "verifyCommand", "readFirst", "rules", "nearMissNote",
+                "discord", "claimsApi", "claimsAuthUrl")
+
+
+def project_block() -> dict:
+    """The project description the viewer shows contributors, read from tangos.json so
+    this file is not a second copy that drifts from the descriptor. Previously hardcoded
+    to name/title/platform, which left the viewer with no repo link, no compiler string
+    and no verify command whenever it loaded this project's data."""
+    p = REPO / "tangos.json"
+    block: dict = {"name": "pictochat-decomp", "title": "PictoChat", "platform": "nds"}
+    try:
+        desc = json.loads(p.read_text(encoding="utf-8"))
+        proj = desc.get("project") or {}
+        block.update({k: proj[k] for k in PROJECT_KEYS if proj.get(k)})
+        # Lets a hosted build re-read current data instead of freezing on the snapshot
+        # it was built with.
+        if url := (desc.get("data") or {}).get("committedDbUrl"):
+            block["dataUrl"] = url
+    except Exception as e:
+        print(f"  ! tangos.json unreadable ({e}), publishing the minimal project block")
+    return block
+
+
 def attribution_overrides() -> dict[str, str]:
     """Manual {'src/arm9/name.c': github_login} for matches the git-add author gets wrong
     -- e.g. work that landed via a maintainer's consolidating PR or squash, which records
@@ -407,7 +435,7 @@ def main():
     }
     db = {
         "generatedAt": time.strftime("%Y-%m-%d %H:%M", time.gmtime()) + " UTC",
-        "project": {"name": "pictochat-decomp", "title": "PictoChat", "platform": "nds"},
+        "project": project_block(),
         "stats": stats,
         "functions": functions,
     }
