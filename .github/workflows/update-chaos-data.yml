@@ -1,7 +1,7 @@
 # On every push to main, regenerate chaos-db.json from committed data (no ROM) and
 # land it on the chaos-data branch, so the hosted viewer and the tangos.dev card
-# self-update. Mirrors sm64ds-decomp's workflow, trimmed to just the data publish
-# (no treemap / README bar / provenance yet - those need the local ROM tooling).
+# self-update. Mirrors sm64ds-decomp's workflow, trimmed to the data publish plus the
+# README progress bar (no treemap / provenance yet - those still need the ROM tooling).
 #
 # The chaos-data branch must already exist (seeded once as an orphan branch holding
 # chaos-db.json). tangos.dev's romstats-sync reads chaos-db.json's `stats` block from
@@ -21,6 +21,7 @@ on:
       - "src/**"
       - "config/**"
       - "tools/chaos_db_ci.py"
+      - "tools/progress.py"
       - ".github/workflows/update-chaos-data.yml"
   workflow_dispatch:
 
@@ -87,21 +88,33 @@ jobs:
             git rebase FETCH_HEAD || { echo "rebase onto the moved branch failed"; exit 1; }
           done
           echo "chaos-data kept moving - could not land chaos-db.json"; exit 1
-      - name: Push contributions.json if changed
-        # Separate from the step above on purpose: an unchanged chaos-db.json exits that
-        # step early, and contributions.json still has to be able to move on its own (a
+      - name: Refresh the README progress bar (committed data only, no ROM)
+        # Both halves of the fraction are committed: the matched count is the src/arm{9,7}
+        # file count, and the total comes from config/**/symbols.txt, which
+        # tools/gen_symbols.py commits precisely so this can run without the ROM.
+        #
+        # It used to be a manual local step, and manual meant stale: main had 651 matched
+        # functions while the badge on the front page still read 301, understating the
+        # project by 350 functions and roughly 4x on bytes for two days.
+        run: python tools/progress.py --write-readme
+      - name: Push contributions.json and the README bar if changed
+        # Separate from the chaos-db step above on purpose: an unchanged chaos-db.json exits
+        # that step early, and these still have to be able to move on their own (a
         # re-attribution changes who holds a match without changing the totals).
+        #
+        # Both files ride one commit and one push. They almost always move together, and
+        # two separate pushes to main would just race each other for no benefit.
         run: |
-          if git diff --quiet -- contributions.json; then
-            echo "no contributor change"; exit 0
+          if git diff --quiet -- contributions.json README.md; then
+            echo "no contributor or progress change"; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           base=$(git rev-parse HEAD)
-          git add contributions.json
-          git commit -m "Refresh contributions from $(git rev-parse --short HEAD)"
+          git add contributions.json README.md
+          git commit -m "Refresh contributions and progress from $(git rev-parse --short HEAD)"
           # Safe from a retrigger loop twice over: a GITHUB_TOKEN push does not start
-          # workflows, and contributions.json is not in this workflow's paths filter.
+          # workflows, and neither contributions.json nor README.md is in the paths filter.
           #
           # Same race as the step above, and this one costs money rather than freshness: #76
           # and #88 merged twelve seconds apart, the first run's push was rejected because main
@@ -112,8 +125,8 @@ jobs:
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then exit 0; fi
             git fetch -q origin main
-            if ! git diff --quiet "$base" FETCH_HEAD -- contributions.json; then
-              echo "another run already refreshed contributions.json - standing down"; exit 0
+            if ! git diff --quiet "$base" FETCH_HEAD -- contributions.json README.md; then
+              echo "another run already refreshed these from a newer main - standing down"; exit 0
             fi
             echo "main moved under the push - rebasing (attempt $attempt)"
             git rebase FETCH_HEAD || { git rebase --abort 2>/dev/null || true; echo "rebase onto the moved main failed"; exit 1; }

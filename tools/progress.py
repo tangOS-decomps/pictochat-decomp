@@ -1,29 +1,39 @@
 """Report decomp completion: matched functions / bytes vs the whole game.
 
-Ported from sm64ds-decomp's tools/progress.py, with one real difference: their
-totals come from a fully-populated config/**/symbols.txt (dsd finishes for a
-normal retail ROM), which lets --write-readme run from committed data alone,
-with no ROM, for a hosted CI workflow. dsd's own function search never
-finishes for this ROM (see notes/pictochat-layout.md), so this project's only
-function-count source is the Ghidra dump (extracted/pictochat_funcs.json) -
-which is gitignored (derived from copyrighted material), so it is NOT
-available in a bare checkout. Consequence:
+Everything here reads committed data only, so --write-readme runs in CI with no
+ROM, the same way sm64ds-decomp's does.
 
-  * matched count: always computable from committed data alone (src/arm9 +
-    src/arm7 file count, cross-referenced against tools/sync_ledger.py's
-    marker-based lookup) - safe for CI if this project ever adds it.
-  * total count / percentage: only available locally, when extracted/ exists
-    (i.e. you've run tools/extract_pictochat.py + the Ghidra export). Without
-    it, this reports the matched count alone and says so, rather than
-    guessing or hand-waving a percentage.
+That was not always true. dsd's own function search never finishes for this ROM
+(see notes/pictochat-layout.md), so the original function-count source was the
+Ghidra dump (extracted/pictochat_funcs.json), which is gitignored - derived from
+copyrighted material - and therefore absent from a bare checkout. The totals then
+had to come from a local extract, which meant the README bar could only ever be
+refreshed by hand, and it drifted: it sat at 301/1551 while main held 651.
+
+tools/gen_symbols.py closed that gap by distilling the Ghidra dump down to a
+boundary table (name, module, addr, size - no bytes, which are the only
+ROM-derived part) and committing it as config/{arm9,arm7}/symbols.txt. Those two
+files carry every function this project knows about, so both halves of the
+fraction now come from the repo:
+
+  * matched count: committed src/arm{9,7} file count, minus the files parked
+    `// NONMATCHING:` by tools/nonmatching.py.
+  * total count, and every function's size: config/**/symbols.txt.
+
+The Ghidra cache is still honoured as a fallback when the boundary tables are
+missing, so a checkout that predates gen_symbols.py keeps working. Prefer the
+committed tables when both exist: they are what CI, tools/chaos_db_ci.py and the
+tangos.dev card already agree on, and a local export can drift from them (run
+`python tools/gen_symbols.py --check` if the two disagree).
 
 Usage:
-    python tools/progress.py                 # full report (needs extracted/)
+    python tools/progress.py                 # full report
     python tools/progress.py --bar           # ready-to-paste README block
     python tools/progress.py --write-readme  # rewrite that block in README.md
 """
 import argparse
 import pathlib
+import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -31,6 +41,11 @@ SRC = REPO / "src"
 README = REPO / "README.md"
 README_START = "<!-- progress:start -->"
 README_END = "<!-- progress:end -->"
+
+SYMBOL_FILES = (REPO / "config" / "arm9" / "symbols.txt",
+                REPO / "config" / "arm7" / "symbols.txt")
+SYMBOL_RE = re.compile(
+    r"^name=(\S+)\s+module=(\S+)\s+addr=0x([0-9a-fA-F]+)\s+size=0x([0-9a-fA-F]+)")
 
 sys.path.insert(0, str(REPO / "tools"))
 import ledger as L   # noqa: E402
@@ -70,51 +85,72 @@ def nonmatching_files():
     return out
 
 
-def totals_from_ghidra():
-    """(count, bytes) from extracted/pictochat_funcs.json, if present locally."""
-    import json
-    cache = REPO / "extracted" / "pictochat_funcs.json"
-    if not cache.is_file():
+def symbol_table():
+    """{(module, addr): size} from the committed boundary tables, {} if absent."""
+    out = {}
+    for p in SYMBOL_FILES:
+        if not p.is_file():
+            continue
+        for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+            m = SYMBOL_RE.match(line.strip())
+            if m:
+                out[(m.group(2), int(m.group(3), 16))] = int(m.group(4), 16)
+    return out
+
+
+def sizes_by_key():
+    """{(module, addr): size} for every function this project knows about.
+
+    config/**/symbols.txt first, because it is committed and is the same table
+    CI and the tangos.dev card count against. The gitignored Ghidra cache is the
+    fallback, so a checkout predating tools/gen_symbols.py still reports a
+    percentage rather than nothing."""
+    table = symbol_table()
+    if table:
+        return table
+    if not (REPO / "extracted" / "pictochat_funcs.json").is_file():
+        return {}
+    import funcs as F
+    return {(f["module"], f["addr"]): f["size"] for f in F.load_funcs()}
+
+
+def totals(sizes=None):
+    """(count, bytes) over every known function, or None when none are known."""
+    sizes = sizes_by_key() if sizes is None else sizes
+    if not sizes:
         return None
-    funcs = json.loads(cache.read_text())
-    return len(funcs), sum(f["size"] for f in funcs)
+    return len(sizes), sum(sizes.values())
 
 
-def matched_stats():
-    """(matched_count, matched_bytes_if_known) from committed src/ + the
-    Ghidra cache (for sizes only, when present - the count itself never
-    depends on it).
+def matched_stats(sizes=None):
+    """(matched_count, matched_bytes_if_known) from committed src/ plus the
+    size table (for bytes only - the count itself never depends on it).
 
     Sizes are joined by (module, addr) from each file's `// decomp:` marker,
-    NOT by name: the Ghidra cache's names are placeholders (FUN_xxxxxxxx) as
-    of whenever it was last exported, so a function renamed to a real symbol
-    after that (every cross-matched one) would silently join to nothing."""
+    NOT by name: the tables carry placeholder names (FUN_xxxxxxxx) as of
+    whenever they were generated, so a function renamed to a real symbol after
+    that (every cross-matched one) would silently join to nothing."""
+    sizes = sizes_by_key() if sizes is None else sizes
     files = matched_files()
     n = len(files)
-    total_bytes = None
-    cache = REPO / "extracted" / "pictochat_funcs.json"
-    if cache.is_file():
-        import funcs as F
-        by_key = {(f["module"], f["addr"]): f["size"] for f in F.load_funcs()}
-        sized, missed = 0, 0
-        for _, p in files:
-            head = p.read_text(encoding="utf-8", errors="ignore")[:400]
-            m = L.MARKER_RE.search(head)
-            if not m:
-                missed += 1
-                continue
-            key = (m.group(1), int(m.group(2), 16))
-            sized += by_key.get(key, 0)
-        total_bytes = sized
-    return n, total_bytes
+    if not sizes:
+        return n, None
+    sized = 0
+    for _, p in files:
+        head = p.read_text(encoding="utf-8", errors="ignore")[:400]
+        m = L.MARKER_RE.search(head)
+        if not m:
+            continue
+        sized += sizes.get((m.group(1), int(m.group(2), 16)), 0)
+    return n, sized
 
 
 def render_bar(matched, total, matched_bytes, total_bytes, nonmatching):
     nm_suffix = f"  ({nonmatching} more parked NONMATCHING - logic-correct, not byte-exact)" if nonmatching else ""
     if total is None:
         return (f"**{matched} function(s) matched** (byte-exact){nm_suffix}. Total function count "
-                f"needs a local Ghidra export (extracted/pictochat_funcs.json) to report - "
-                f"see notes/ghidra-setup.md.")
+                f"needs config/**/symbols.txt to report - regenerate it with "
+                f"tools/gen_symbols.py (see notes/ghidra-setup.md).")
     pct = 100.0 * matched / total if total else 0.0
     bpct = (100.0 * matched_bytes / total_bytes) if total_bytes else 0.0
     filled = int(pct / 5)
@@ -140,10 +176,11 @@ def main():
     ap.add_argument("--write-readme", action="store_true", help="rewrite it in place")
     args = ap.parse_args()
 
-    matched, matched_b = matched_stats()
+    sizes = sizes_by_key()
+    matched, matched_b = matched_stats(sizes)
     nonmatching = len(nonmatching_files())
-    totals = totals_from_ghidra()
-    total_n, total_b = totals if totals else (None, None)
+    known = totals(sizes)
+    total_n, total_b = known if known else (None, None)
 
     block = render_bar(matched, total_n, matched_b, total_b, nonmatching)
 
@@ -159,12 +196,12 @@ def main():
     if nonmatching:
         print(f"nonmatching (parked): {nonmatching} function(s)")
     if total_n is not None:
-        print(f"total (Ghidra-known): {total_n} function(s), {total_b} bytes")
+        print(f"total (known functions): {total_n} function(s), {total_b} bytes")
         print(f"progress: {100.0 * matched / total_n:.2f}% of functions, "
               f"{100.0 * (matched_b or 0) / total_b:.2f}% of bytes")
     else:
-        print("total: unknown (no local extracted/pictochat_funcs.json - "
-              "run tools/extract_pictochat.py + the Ghidra export first)")
+        print("total: unknown (no config/**/symbols.txt and no local "
+              "extracted/pictochat_funcs.json - run tools/gen_symbols.py)")
 
 
 if __name__ == "__main__":
