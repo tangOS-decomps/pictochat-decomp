@@ -419,7 +419,40 @@ def _write_output(path, results, tin, tout, model):
                        for r in results
                        if not r["matched"] and r["c_source"] and r["divergences"] < 999],
     }
-    pathlib.Path(path).write_text(json.dumps(out, indent=1), encoding="utf-8")
+    blob = json.dumps(out, indent=1)
+    pathlib.Path(path).write_text(blob, encoding="utf-8")
+    _archive_run(path, blob)
+
+
+def _archive_run(path, blob, keep=40):
+    """Keep a timestamped copy of every run's results next to the live one.
+
+    The Console hands the driver ONE output path per agent and the next drive overwrites it, so a
+    failing run destroys its own evidence as soon as anything else runs. That is not hypothetical:
+    a driver reporting div=3 while the banking step re-verified the same source at 999 could not be
+    diagnosed at all, because the results had already been clobbered by the following batch.
+
+    The live path keeps its exact name and contents - the Console's contract is untouched. The copy
+    (and the worklist that explains it, since results alone lack addr/size/module) goes in
+    history/, oldest pruned past `keep`. Never fatal: losing an archive must not fail a good run."""
+    try:
+        live = pathlib.Path(path)
+        hist = live.parent / "history"
+        hist.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        (hist / f"{live.stem}-{stamp}.output").write_text(blob, encoding="utf-8")
+        wl = live.with_suffix(".worklist.jsonl")
+        if not wl.is_file():  # <agent>.results.output -> <agent>.worklist.jsonl
+            wl = live.parent / (live.name.split(".")[0] + ".worklist.jsonl")
+        if wl.is_file():
+            (hist / f"{live.stem}-{stamp}.worklist.jsonl").write_text(
+                wl.read_text(encoding="utf-8"), encoding="utf-8")
+        old = sorted(hist.glob("*.output"))[:-keep]
+        for f in old:
+            f.unlink(missing_ok=True)
+            f.with_suffix(".worklist.jsonl").unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def main():
