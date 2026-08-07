@@ -65,9 +65,28 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          base=$(git rev-parse HEAD)
           git add chaos-db.json
           git commit -m "Refresh progress data from $(git -C .. rev-parse --short HEAD)"
-          git push origin chaos-data
+          # Two PRs merging seconds apart start this job twice, and cancel-in-progress only
+          # kills the older run if it has not reached this step yet. Past that point both runs
+          # push and the loser is rejected, because chaos-data moved under it. The run then
+          # goes red having published nothing, so the matches that just merged stay off the
+          # viewer until some later merge happens to republish them.
+          #
+          # So retry onto the moved branch. If it moved because another run already republished
+          # chaos-db.json, that run read a newer main than this one did and its file is the
+          # better one - stand down rather than overwrite it with older data.
+          for attempt in 1 2 3; do
+            if git push origin chaos-data; then exit 0; fi
+            git fetch -q origin chaos-data
+            if ! git diff --quiet "$base" FETCH_HEAD -- chaos-db.json; then
+              echo "another run already published newer data - standing down"; exit 0
+            fi
+            echo "chaos-data moved under the push - rebasing (attempt $attempt)"
+            git rebase FETCH_HEAD || { echo "rebase onto the moved branch failed"; exit 1; }
+          done
+          echo "chaos-data kept moving - could not land chaos-db.json"; exit 1
       - name: Push contributions.json if changed
         # Separate from the step above on purpose: an unchanged chaos-db.json exits that
         # step early, and contributions.json still has to be able to move on its own (a
@@ -78,8 +97,25 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          base=$(git rev-parse HEAD)
           git add contributions.json
           git commit -m "Refresh contributions from $(git rev-parse --short HEAD)"
           # Safe from a retrigger loop twice over: a GITHUB_TOKEN push does not start
           # workflows, and contributions.json is not in this workflow's paths filter.
-          git push origin HEAD:main
+          #
+          # Same race as the step above, and this one costs money rather than freshness: #76
+          # and #88 merged twelve seconds apart, the first run's push was rejected because main
+          # had moved, and contributions.json never moved with it. The coin ledger pays the
+          # DELTA between this file and what it last paid, so a refresh that never lands is a
+          # match that never earns its author anything. Retry onto the moved branch, and stand
+          # down if another run already refreshed the file from a newer main than this one read.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch -q origin main
+            if ! git diff --quiet "$base" FETCH_HEAD -- contributions.json; then
+              echo "another run already refreshed contributions.json - standing down"; exit 0
+            fi
+            echo "main moved under the push - rebasing (attempt $attempt)"
+            git rebase FETCH_HEAD || { git rebase --abort 2>/dev/null || true; echo "rebase onto the moved main failed"; exit 1; }
+          done
+          echo "main kept moving - could not land contributions.json"; exit 1
