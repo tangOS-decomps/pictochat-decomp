@@ -158,38 +158,67 @@ def verify(c_path, name, row):
     return False, int(m.group(1)) if m else 999, detail
 
 
-def _max_tokens_for(cfg):
+# Hard ceiling for the truncation escalation in run_one. A reply cut off mid-reasoning is retried
+# with double the budget, and this is where that stops - high enough for a reasoner that genuinely
+# needs to think (deepseek-reasoner tops out at 64k output), low enough that a model stuck in a
+# thinking loop cannot bill indefinitely.
+MAX_OUTPUT_TOKENS = int(os.environ.get("GLM_MAX_OUTPUT_TOKENS_CAP", "64000"))
+# How many times one function may double its ceiling. Bounds the worst case for a model that
+# truncates no matter how much room it gets: 24000 -> 48000 -> 64000, then give up on it.
+MAX_ESCALATIONS = 2
+
+
+def _is_reasoner(cfg):
+    m = (cfg.get("model") or "").lower()
+    return bool("reason" in m or "nemo" in m or re.match(r"^(gpt-5|o[1-4])", m))
+
+
+def _max_tokens_for(cfg, override=None):
     """Output ceiling. A reasoning model spends its hidden thinking INSIDE this limit, so the flat
     4096 that used to be hardcoded here starves it: the reasoning consumes the whole budget and the
     reply is cut off before the code block ever starts, which then reads as "no code block
     returned". sm64ds's driver learned this the expensive way (130k output tokens, 0 landed) and
-    gives known reasoners real headroom - they only bill what they use."""
-    m = (cfg.get("model") or "").lower()
-    reasoner = "reason" in m or "nemo" in m or re.match(r"^(gpt-5|o[1-4])", m)
-    return int(os.environ.get("GLM_MAX_OUTPUT_TOKENS", "24000" if reasoner else "8000"))
+    gives known reasoners real headroom - they only bill what they use.
+
+    `override` is the escalated budget run_one carries after a truncation; the env var sets only the
+    STARTING ceiling, so raising it by hand is no longer the only way out of a cut-off."""
+    if override:
+        return int(override)
+    return int(os.environ.get("GLM_MAX_OUTPUT_TOKENS", "24000" if _is_reasoner(cfg) else "8000"))
 
 
-def call_model(messages, cfg):
+def call_model(messages, cfg, max_tokens=None):
     """One API round-trip. Returns (text, tokens_in, tokens_out).
 
     Raises AuthFailed on 401/403 and Throttled on 429/5xx so the caller can react differently to
     "your key is wrong" (stop) and "slow down" (retry) instead of scoring both as a failed match.
+
+    `max_tokens` overrides the ceiling for this call, so a caller retrying a truncated reply can
+    give it more room rather than re-buying the same cut-off.
     """
+    mt = _max_tokens_for(cfg, max_tokens)
+    system = SYSTEM
+    # Nemotron reasons so heavily it burns the whole budget before emitting the code block. Its
+    # NVIDIA system toggle "detailed thinking off" roughly halves the thinking, so it actually
+    # submits a candidate and uses the compile-check loop instead of truncating. Same trick
+    # sm64ds's driver uses; without it the first attempt on a big function is usually wasted.
+    if "nemo" in (cfg.get("model") or "").lower():
+        system = "detailed thinking off\n\n" + SYSTEM
     if cfg["dialect"] == "openai":
         url = cfg["base"].rstrip("/") + "/v1/chat/completions"
         body = {
             "model": cfg["model"],
-            "messages": [{"role": "system", "content": SYSTEM}] + messages,
-            "max_tokens": _max_tokens_for(cfg),
+            "messages": [{"role": "system", "content": system}] + messages,
+            "max_tokens": mt,
         }
         headers = {"Authorization": f"Bearer {cfg['key']}", "Content-Type": "application/json"}
     else:
         url = cfg["base"].rstrip("/") + "/v1/messages"
         body = {
             "model": cfg["model"],
-            "system": SYSTEM,
+            "system": system,
             "messages": messages,
-            "max_tokens": _max_tokens_for(cfg),
+            "max_tokens": mt,
         }
         headers = {
             "x-api-key": cfg["key"],
@@ -327,9 +356,13 @@ def work_one(row, cfg, attempts, live=False):
     best = None
     best_div = 999
     last_detail = ""
-    for attempt in range(1, attempts + 1):
+    budget = None   # raised ceiling carried forward after a truncation (None = the model default)
+    escalations = 0 # how many times the ceiling has been doubled for this function
+    attempt = 0
+    while attempt < attempts:
+        attempt += 1
         try:
-            text, a, b, finish = call_model(messages, cfg)
+            text, a, b, finish = call_model(messages, cfg, budget)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
             # A rejected key is not a property of this function, so reporting it as div=999 and
@@ -353,11 +386,28 @@ def work_one(row, cfg, attempts, live=False):
             # This used to be a bare `continue` - an empty reply burned an attempt with no log line
             # at all. Two very different causes need saying apart: a reply cut off at the token
             # ceiling (the reasoner spent its whole budget thinking) versus a model that genuinely
-            # returned nothing. Retrying a cut-off at the same ceiling truncates identically, so
-            # stop rather than spend the remaining attempts on it.
+            # returned nothing.
+            #
+            # A cut-off used to end the function outright, telling the operator to go raise
+            # GLM_MAX_OUTPUT_TOKENS by hand. That threw the whole target away over a number the
+            # driver could just as well raise itself, and on a batch of big functions it threw most
+            # of them away: retrying at the SAME ceiling truncates identically, so "stop" looked
+            # like the only alternative. Double the ceiling and resend the SAME prompt instead -
+            # the model only bills what it uses, and a truncation now costs one extra call rather
+            # than the function. The retry does NOT consume an attempt, because nothing about the
+            # candidate was tested; only a real compile-and-verify should.
             if finish in ("length", "max_tokens"):
-                note_attempt(f"attempt {attempt}: cut off at the {_max_tokens_for(cfg)}-token "
-                             f"ceiling before writing any code - raise GLM_MAX_OUTPUT_TOKENS")
+                used = _max_tokens_for(cfg, budget)
+                nxt = min(used * 2, MAX_OUTPUT_TOKENS)
+                if nxt > used and escalations < MAX_ESCALATIONS:
+                    budget = nxt
+                    escalations += 1
+                    attempt -= 1  # this call tested nothing - don't spend an attempt on it
+                    note_attempt(f"attempt {attempt + 1}: cut off at the {used}-token ceiling "
+                                 f"before writing any code - retrying at {nxt}")
+                    continue
+                note_attempt(f"attempt {attempt}: cut off at the {used}-token ceiling before "
+                             f"writing any code - already at the {MAX_OUTPUT_TOKENS} cap")
                 break
             note_attempt(f"attempt {attempt}: no code block returned")
             continue
