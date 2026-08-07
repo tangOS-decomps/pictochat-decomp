@@ -18,10 +18,11 @@ tools/mwccarm/license.dat
 
 ## THE TOOLCHAIN IS `2.0/*` (settled 2026-08-04 by byte evidence)
 
-`tools/match.py`'s `CANONICAL` is **`2.0/base`**, and `PINNED` is the
-`2.0/*` family. **Do not "fix" this back to `dsi/*`.** If you are here
-because a candidate won't match under `2.0/*`, sweep `--all` and read the
-evidence below before concluding the pin is wrong.
+`tools/match.py`'s `CANONICAL` is **`2.0/sp1`**, and `PINNED` is the
+`2.0/*` family minus `2.0/base` (ruled out below, see "Narrowing").
+**Do not "fix" this back to `dsi/*`.** If you are here because a candidate
+won't match under `2.0/*`, sweep `--all` and read the evidence below before
+concluding the pin is wrong.
 
 ### Why this was previously (wrongly) pinned to `dsi/*`
 
@@ -115,8 +116,8 @@ technique). Earlier notes here said it did not launch
 (`STATUS_INVALID_IMAGE_FORMAT`) - **re-verified 2026-08-04, it launches fine**
 (`mwccarm.exe -version` reports `Metrowerks C/C++ for Embedded ARM ...
 Version 2.0 build 56`), so whatever DLL mismatch caused that is no longer an
-issue on this machine. It's included in `--all`/`--trio` sweeps for real, not
-silently no-op'd.
+issue on this machine. It's included in `--all` sweeps for real, not silently
+no-op'd. It is not in `PINNED`, so `--trio` does not reach it.
 
 **Is the vendored build set complete?** Checked 2026-08-04 by reading the 7z
 header of the archive.org-preserved Metrowerks FTP mirror

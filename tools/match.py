@@ -322,7 +322,7 @@ def main():
     ap.add_argument("--module", default="unk_autoload_0", choices=list(MODULES))
     ap.add_argument("--version", default=None, help="check a single version")
     ap.add_argument("--versions", default=None, help="comma list to sweep")
-    ap.add_argument("--trio", action="store_true", help="sweep the dsi/ builds (most likely for this title)")
+    ap.add_argument("--trio", action="store_true", help="sweep the pinned 2.0/* builds (2.0/base excluded, ruled out by byte evidence)")
     ap.add_argument("--all", action="store_true", help="sweep every known version")
     ap.add_argument("--brief", action="store_true", help="terse: per-version pass/fail")
     ap.add_argument("--flags", default=None)
