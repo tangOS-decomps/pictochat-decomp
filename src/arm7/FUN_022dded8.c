@@ -1,13 +1,34 @@
 // decomp: module=arm7 addr=0x022dded8 name=FUN_022dded8
-#pragma arm
-extern void FUN_037c5de8(unsigned short *a, unsigned short *b);
+// flags: -O4,s -noThumb
+//
+// Rewrites the trailer that sits `count` halfwords past the start of command
+// block `p` (the same overlay FUN_022d0684 builds): lifts the trailer's first
+// halfword back into the block's opcode field, then stamps the trailer with
+// status 2, a zero, and the block's +0x18 halfword, before forwarding the
+// block to func_037c5de8.
 
-void FUN_022dded8(unsigned short *a, unsigned short *b)
+typedef struct CmdBlock {
+    unsigned short f00;
+    unsigned short f02;
+    unsigned short f04;
+    unsigned short f06;
+    unsigned short f08;
+    unsigned short f0a;
+    unsigned short op;
+    unsigned short count;
+    unsigned short data[8];
+} CmdBlock;
+
+extern void func_037c5de8(void *a, CmdBlock *p);
+
+void FUN_022dded8(void *a, CmdBlock *p)
 {
-    unsigned short *p = b + b[7];
-    b[6] = p[8];
-    p[9] = 2;
-    p[10] = 0;
-    p[11] = b[12];
-    FUN_037c5de8(a, b);
+    CmdBlock *tail = (CmdBlock *)((unsigned short *)p + p->count);
+
+    p->op = tail->data[0];
+    tail->data[1] = 2;
+    tail->data[2] = 0;
+    tail->data[3] = p->data[4];
+
+    func_037c5de8(a, p);
 }
