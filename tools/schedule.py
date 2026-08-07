@@ -296,6 +296,11 @@ def main():
     args = ap.parse_args()
 
     corpus, rich = load_corpus()
+    # Worked examples always come from the FULL corpus. Refine mode narrows `corpus` to parked
+    # functions, and building the example pool from that would search a set with nothing matched
+    # in it - reporting "similarity ranking unavailable" on a repo that has 449 matched functions
+    # sitting right there.
+    full_corpus = corpus
     matched_keys = ledger.matched_set() | _chaos_matched_keys()
     if args.include_attempted:
         # Refine mode: parked drafts are exactly the pool we want, so they are the corpus rather
@@ -338,7 +343,7 @@ def main():
             rows.append(f)
         # Smallest first is the useful default: short functions match more often per unit of
         # effort, so a batch of them lands more work than the same count of large ones.
-        pool = [] if args.similar is False else _example_pool(corpus, matched_keys)
+        pool = [] if args.similar is False else _example_pool(full_corpus, matched_keys)
         if args.similar is not False and not pool:
             # Cannot rank: no extracted/ ROM bytes, or nothing matched yet to compare against.
             # Fall back rather than exit - being the default means never refusing to produce a

@@ -96,7 +96,7 @@
   ],
   "console": {
     "scheduler": "schedule",
-    "refineScheduler": "schedule",
+    "refineScheduler": "refine",
     "randomScheduler": "schedule",
     "enrich": "schedule",
     "verify": "match",
@@ -159,6 +159,52 @@
           "type": "boolean",
           "flag": "--include-attempted",
           "description": "Offer functions parked as nonmatching - the ones that already carry a draft to improve. The refine pass."
+        }
+      ]
+    },
+    {
+      "id": "refine",
+      "label": "Refine parked drafts",
+      "category": "reporting",
+      "readOnly": true,
+      "command": "{python} tools/schedule.py --include-attempted {flags}",
+      "description": "Work the functions that already carry a parked NONMATCHING draft, handing each target its draft and how many words still differ, so the model improves it instead of rewriting from scratch. This is where a near-miss actually gets finished - a 3-word draft is the closest thing to a free match this repo has.",
+      "args": [
+        {
+          "name": "limit",
+          "type": "integer",
+          "flag": "--limit",
+          "description": "How many targets to return."
+        },
+        {
+          "name": "out",
+          "type": "string",
+          "flag": "--out",
+          "description": "Write JSONL here instead of stdout."
+        },
+        {
+          "name": "module",
+          "type": "string",
+          "flag": "--module",
+          "description": "main, itcm, unk_autoload_0, unk_autoload_2 or arm7."
+        },
+        {
+          "name": "min",
+          "type": "string",
+          "flag": "--min",
+          "description": "Smallest function size to offer."
+        },
+        {
+          "name": "max",
+          "type": "string",
+          "flag": "--max",
+          "description": "Largest function size to offer."
+        },
+        {
+          "name": "addr",
+          "type": "string",
+          "flag": "--addr",
+          "description": "Pin ONE function by address, ignoring the size filters. This is the enrich path."
         }
       ]
     },
