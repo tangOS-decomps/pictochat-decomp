@@ -321,16 +321,24 @@ def project_block() -> dict:
         desc = json.loads(p.read_text(encoding="utf-8"))
         proj = desc.get("project") or {}
         block.update({k: proj[k] for k in PROJECT_KEYS if proj.get(k)})
+        data = desc.get("data") or {}
         # Lets a hosted build re-read current data instead of freezing on the snapshot
         # it was built with.
-        if url := (desc.get("data") or {}).get("committedDbUrl"):
+        if url := data.get("committedDbUrl"):
             block["dataUrl"] = url
-        # This project's live stream on the tangos backend. It carries one thing -- "your CI
-        # just published fresh data" -- so the viewer re-reads dataUrl the moment this file
-        # changes instead of waiting out its poll. Not claimsApi: that one would also hand
-        # this project sm64ds's claims, contributor colours and career counts.
-        if url := (desc.get("data") or {}).get("liveApi"):
+        # This project's live stream on the tangos backend: publish events plus this
+        # project's own colours, counts and claims, all scoped to it.
+        if url := data.get("liveApi"):
             block["liveApi"] = url
+        # The claims service hosts one board per decomp; these scope the viewer's claim
+        # reads and its agent-prompt try-locks to OUR board. Publishing claimsApi used to
+        # be refused here because the viewer treated it as "the backend serves this
+        # project" and would have painted sm64ds's data onto our atlas -- the viewer now
+        # keys atlas extras off liveApi, so the field means claims and nothing else.
+        if url := data.get("claimsApi"):
+            block["claimsApi"] = url
+        if pid := data.get("projectId"):
+            block["projectId"] = pid
     except Exception as e:
         print(f"  ! tangos.json unreadable ({e}), publishing the minimal project block")
     return block
