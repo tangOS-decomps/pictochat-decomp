@@ -1,0 +1,70 @@
+# Two cheap checks the byte gate structurally cannot make, both learned the
+# hard way from Console driver PRs:
+#
+#   placement -- pr_linkcheck resolves a file's target from its `// decomp:`
+#     header, not its path, so a file at flat src/FUN_x.c (never compiled,
+#     never counted) still byte-verifies and goes green. Six PRs landed that
+#     way on 2026-08-07. tools/check_placement.py holds the layout rules.
+#
+#   duplicate -- independent drivers bank the same function from checkouts
+#     that don't see each other, so the same byte-identical file arrives as
+#     several open PRs (#128/#130/#133, 2026-08-08). Each is individually
+#     green; the redundancy is only visible across PRs, so a per-PR compile
+#     gate can never see it. Lowest open PR number wins; later ones fail here
+#     with a pointer to it.
+#
+# Plain `pull_request` on purpose (unlike pr-validate.yml's
+# pull_request_target): this workflow checks out and reads PR code, so it must
+# not have secrets. The default read-only GITHUB_TOKEN is enough to list open
+# PRs and their file blob shas.
+name: placement guard
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  placement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check src/ placement
+        run: python3 tools/check_placement.py
+
+      - name: Check for duplicate open PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Fail if a LOWER-numbered open PR (same base) adds a file this PR
+            // also adds. Same path + same blob sha = the same bytes; different
+            // sha on the same added path is still a collision worth a human
+            // look, so both cases fail, worded differently.
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const listFiles = async (n) => (await github.paginate(
+              github.rest.pulls.listFiles, { owner, repo, pull_number: n, per_page: 100 }));
+            const mine = new Map((await listFiles(pr.number))
+              .filter(f => f.status === 'added' && f.filename.startsWith('src/'))
+              .map(f => [f.filename, f.sha]));
+            if (mine.size === 0) return;
+            const open = await github.paginate(github.rest.pulls.list,
+              { owner, repo, state: 'open', base: pr.base.ref, per_page: 100 });
+            const problems = [];
+            for (const other of open) {
+              if (other.number >= pr.number) continue;
+              for (const f of await listFiles(other.number)) {
+                if (f.status !== 'added' || !mine.has(f.filename)) continue;
+                problems.push(mine.get(f.filename) === f.sha
+                  ? `${f.filename}: byte-identical file already added by open PR #${other.number} -- close this one as a duplicate`
+                  : `${f.filename}: also added by open PR #${other.number} with DIFFERENT content -- reconcile before either merges`);
+              }
+            }
+            if (problems.length) {
+              core.setFailed(problems.join('\n'));
+            }
