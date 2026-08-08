@@ -420,7 +420,7 @@ def work_one(row, cfg, attempts, live=False):
             ok, div, detail = verify(tmp, name, row)
             if not ok:
                 last_detail = detail
-                note_attempt(f"attempt {attempt}: div={div}" + (f" ({detail})" if detail else ""))
+                note_attempt(f"attempt {attempt}: div={div}")
             if ok:
                 note_attempt(f"attempt {attempt}: MATCH")
                 return {"name": name, "matched": True, "divergences": 0, "attempts": attempt,
