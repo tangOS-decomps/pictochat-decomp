@@ -11,8 +11,8 @@ turned up as a DSi system utility.
 ## Status
 
 <!-- progress:start -->
-**976 / 1551 functions matched (62.9%)**  `[############--------]`  (20 more parked NONMATCHING - logic-correct, not byte-exact)
-51944 / 167020 bytes (31.1%)
+**977 / 1551 functions matched (63.0%)**  `[############--------]`  (20 more parked NONMATCHING - logic-correct, not byte-exact)
+52074 / 167020 bytes (31.2%)
 <!-- progress:end -->
 
 (regenerate with `python tools/progress.py --write-readme`; needs a local
