@@ -11,7 +11,7 @@ turned up as a DSi system utility.
 ## Status
 
 <!-- progress:start -->
-**976 / 1551 functions matched (62.9%)**  `[############--------]`  (16 more parked NONMATCHING - logic-correct, not byte-exact)
+**976 / 1551 functions matched (62.9%)**  `[############--------]`  (20 more parked NONMATCHING - logic-correct, not byte-exact)
 51944 / 167020 bytes (31.1%)
 <!-- progress:end -->
 
