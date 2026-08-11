@@ -1,6 +1,6 @@
 //cpp
 // decomp: module=unk_autoload_0 addr=0x023374f0 name=FUN_023374f0
-// NONMATCHING: the ARM fill algorithm and size are correct, but mwcc schedules the odd-byte and halfword paths differently and uses different temporary registers for the end pointer and tail merge. (div=14). Logic verified correct vs ROM; not byte-exact.
+// verify: python tools/match.py --c src/arm9/FUN_023374f0.cpp --func FUN_023374f0 --addr 0x023374f0 --size 0x94 --module unk_autoload_0 --version 2.0/sp1
 // flags: -noThumb
 
 extern "C" {
@@ -10,38 +10,36 @@ typedef unsigned int u32;
 
 void FUN_023374f0(u8 *dst, u32 value, u32 size)
 {
+    u16 half;
+    u32 word;
+    u8 *end;
+
     if (size == 0) return;
 
     if ((u32)dst & 1) {
         *(u16 *)(dst - 1) = (*(u16 *)(dst - 1) & 0xff) | (value << 8);
         dst++;
-        size--;
-        if (size == 0) return;
+        if (--size == 0) return;
     }
 
     if (size >= 2) {
-        value |= value << 8;
+        half = (u16)(value | value << 8);
         if ((u32)dst & 2) {
-            *(u16 *)dst = value;
+            *(u16 *)dst = half;
             dst += 2;
             size -= 2;
             if (size == 0) return;
         }
 
-        value |= value << 16;
-        {
-            u32 count = size & ~3;
-            if (count != 0) {
-                size -= count;
-                u8 *end = dst + count;
-                do {
-                    *(u32 *)dst = value;
-                    dst += 4;
-                } while (dst < end);
-            }
+        word = half | (half << 16);
+        end = dst + (size & ~3);
+        size &= 3;
+        while (dst < end) {
+            *(u32 *)dst = word;
+            dst += 4;
         }
         if (size & 2) {
-            *(u16 *)dst = value;
+            *(u16 *)dst = half;
             dst += 2;
         }
     }
