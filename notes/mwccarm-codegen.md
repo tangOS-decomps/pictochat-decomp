@@ -1917,6 +1917,50 @@ So the remaining question is narrow and well posed: **what decides mwcc's
 stack-slot ORDER here, given it is neither declaration order nor named-vs-temp
 status?** Everything else about this function is now byte-shaped correctly.
 
+## 3t. `FUN_022ce8b0` **MATCHED** (2026-10-03, 312 -> 0 words)
+
+The 4.5KB arm7 dispatcher, `src/arm7/FUN_022ce8b0.c`. Two things mattered:
+the compiler build, then reading register identity instead of diff counts.
+
+**1. The "zero-term MLA wall" was the compiler build.** See
+`notes/setup-mwccarm.md`: `2.0/sp2p2`+ fold the zero high word of a
+`(s64)(int)x * const` multiply and `sp1`..`sp2` cannot. Under `sp2p2` the
+old draft went from 312 differing words to everything shape-aligned except
+case 0x184. Several sp1-era workarounds (volatile locals, a two-step
+`special = 0x8001; special = 0x18000 - special`, hand-built zero webs) were then
+actively harmful. Natural C reproduced the ROM's `rsb #0x18000` and hoisted zero
+registers by itself.
+
+**2. Levers that closed the rest**, roughly in order of payoff:
+- **Draft bugs that show up as coloring:** two IRQ restores called
+  `func_037cb534()` without the saved state, and one `FUN_022d5540(1)` was
+  missing its second argument (the ROM shares that `r1 = 0` with a nearby
+  store). Fixing the arity removed whole coloring clusters.
+- **Switch on the volatile read directly** (`switch (*(volatile u16 *)&msg->type)`)
+  instead of copying it into the function-wide `uVar15`. That fixed the r2/r3
+  swap at the head and in case 0x85's reuse of the CSE'd `*state`.
+- **Variable identity (sm64ds 6q) is the main callee-saved lever here.**
+  Declaration order of function-scope locals was inert: single moves, a
+  528-neighbour pairwise climb, and every position for a fresh local all scored
+  the same. *Which* shared variable carries a value moved registers. Case 0x185
+  needed `iVar5`/`iVar16` swapped and the `r8[0x48]` copy in `uVar8`. Case 0x182
+  needed `act` in `uVar8`. Sweep identities with a script and print the
+  allocated register at the def site (sm64ds 6bg). In case 0x182, 5 of the 6
+  (act, fl, ctx) permutations were reachable before the target one appeared,
+  and only after the other cases were fixed.
+- **Access spelling can move a pointer web's rank.** `ctx` sat in r4 under
+  every identity and every declared type. Writing the field as
+  `((u16 *)ctx)[0x5f]` instead of `*(u16 *)((int)ctx + 0xbe)` moved it to r7.
+- **Spill-vs-register and schedule:** the target recomputes `r8 + idx*8` after
+  a call instead of spilling it. Indexing the u64 table as
+  `((u64 *)(r8 + 0x39c))[idx]` for the clearing store broke the CSE. The final
+  `ldrh fp` placement in the case 0x184 preheader was fixed only by giving the
+  loop counter type `u16` (`counter++`), with `now = call() | 1` before
+  `bits = *base`. Statement order, `volatile`, `|1` placement and `-proc` did
+  not fix it.
+- The stock decomp-permuter on the whole 1100-instruction function only tied
+  the base after ~3000 iterations; targeted identity/shape sweeps did all the work.
+
 ## 4. Where to look next
 
 `../sm64ds-decomp/notes/mwccarm-codegen.md` sections not yet read into this project's

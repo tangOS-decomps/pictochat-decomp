@@ -89,6 +89,19 @@ release is not. `CANONICAL` is **`2.0/sp1`**, the earliest build consistent
 with every byte of evidence. If you ever find a function that discriminates
 among those nine, narrow it further and update this section.
 
+**Narrowed (2026-10-03): `FUN_022ce8b0` discriminates - only `2.0/sp2p2`,
+`sp2p3` and `sp2p4` reproduce it.** Its case 0x182 computes
+`(s64)(int)x * 0x82ea`. `sp2p2`+ drop the constant's zero high word from the
+64-bit multiply (`umull` + `asr` + one `mla`, exactly as the ROM has);
+`sp1`..`sp2` always emit a second `mla` against a register holding 0, and no
+source spelling avoids it (the sp1-era draft of this function had to fake a
+compensating instruction elsewhere to keep the size right). Since one ROM is
+built by one toolchain, the answer set for the whole title is now
+`2.0/sp2p2`..`sp2p4`. `CANONICAL` is still `2.0/sp1` in `tools/match.py`; the
+landing gate sweeps every pinned build, so `src/arm7/FUN_022ce8b0.c` verifies,
+but a plain `match.py` call without `--trio`/`--version 2.0/sp2p2` reports it as
+non-matching. Moving `CANONICAL` to `2.0/sp2p2` is the consistent follow-up.
+
 (`2.0/sp1p5`, `sp1p6` and `sp1p7` were missing from `SWEEP` entirely until
 2026-08-04 and had never been tested by any sweep in this project's history.
 They are included now - and they turned out to be in the answer set.)
