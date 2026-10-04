@@ -1,41 +1,45 @@
 //cpp
 // decomp: module=unk_autoload_0 addr=0x0232598c name=FUN_0232598c
-// NONMATCHING: direct field expressions reproduce the full 0xc8-byte function and instruction shapes, but mwcc colors the value/advance/page temporaries differently and schedules two call arguments differently. (div=17). Logic verified correct vs ROM; not byte-exact.
+// NONMATCHING: instruction stream is exact; the only difference is a callee-saved rotation (ROM: advance r4, page r6, ch r7; C: ch r4, advance r7) that survived declaration order, local copies of both args, types, pragmas, every 2.0/* build and decomp-permuter (div=8). Logic verified correct vs ROM; not
+// byte-matchable from C at mwccarm 2.0/sp1 (see notes/matching-style.md).
+// Counts as decompiled, not matched.
 
 extern "C" {
+typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 
+typedef struct {
+    u16 chars[0x80];
+    u16 count;
+    u16 x;
+} Line; // 0x104
+
+typedef struct {
+    u8 head[0x14];
+    u8 canvas[0x42];
+    Line lines[5];
+    u16 page;
+    u16 baseY;
+} Text;
+
 void *FUN_02321c60(void);
-u32 FUN_0232de60(void *, u32);
-u32 FUN_0232df14(void *, u32);
-int FUN_02325960(void *);
-void FUN_0232dc5c(void *, void *, int, int, u32, int);
+int FUN_0232de60(void *, int);
+int FUN_0232df14(void *, int);
+int FUN_02325960(Text *);
+void FUN_0232dc5c(void *, void *, int, int, int, int);
 
-void FUN_0232598c(void *arg, int value)
+void FUN_0232598c(Text *text, int ch)
 {
-    u16 advance;
-    u16 width;
-    char *p;
+    int advance = (u16)FUN_0232de60(FUN_02321c60(), ch);
+    u16 width = FUN_0232df14(FUN_02321c60(), ch);
 
-    p = (char *)arg;
-    advance = FUN_0232de60(FUN_02321c60(), value);
-    width = FUN_0232df14(FUN_02321c60(), value);
-
-    if (advance + *(u16 *)(p + *(u16 *)(p + 0x56a) * 0x104 + 0x158) <= 0xe1 ||
-        FUN_02325960(p) != 0) {
-        u16 *count_base = (u16 *)(p + 0x156);
-        u16 page = *(u16 *)(p + 0x56a);
-        u16 count = *(u16 *)((char *)count_base + page * 0x104);
-        *(u16 *)((char *)count_base + page * 0x104) = count + 1;
-        *(u16 *)(p + *(u16 *)(p + 0x56a) * 0x104 + 0x56 + count * 2) = value;
-
-        u16 draw_page = *(u16 *)(p + 0x56a);
-        char *draw_record = p + draw_page * 0x104;
-        FUN_0232dc5c(FUN_02321c60(), p + 0x14,
-                     *(u16 *)(draw_record + 0x158) + 0x18 - width,
-                     *(u16 *)(p + 0x56c) + draw_page * 0x10, value, 1);
-        *(u16 *)(p + *(u16 *)(p + 0x56a) * 0x104 + 0x158) += advance + 1;
+    if (advance + text->lines[text->page].x <= 0xe1 || FUN_02325960(text) != 0) {
+        text->lines[text->page].chars[text->lines[text->page].count++] = ch;
+        FUN_0232dc5c(FUN_02321c60(), text->canvas,
+                     text->lines[text->page].x + 0x18 - width,
+                     text->baseY + text->page * 0x10, ch, 1);
+        text->lines[text->page].x += advance + 1;
     }
 }
 }

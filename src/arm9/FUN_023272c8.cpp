@@ -1,6 +1,8 @@
 //cpp
 // decomp: module=unk_autoload_0 addr=0x023272c8 name=FUN_023272c8
-// NONMATCHING: state loading, loop control, branch bodies, and literal-pool layout are correct; the remaining 11 differences are callee-saved register coloring and scheduling. (div=11). Logic verified correct vs ROM; not byte-exact.
+// NONMATCHING: instruction stream and schedule are exact; the only difference is a callee-saved rotation (ROM: i r4, reverse r5, remaining r6, slot r7; C: slot r4, i r5, reverse r6, remaining r7) that survived all 24 declaration orders, types, loop forms, inlined helpers, pragmas, every 2.0/* build and decomp-permuter (div=9). Logic verified correct vs ROM; not
+// byte-matchable from C at mwccarm 2.0/sp1 (see notes/matching-style.md).
+// Counts as decompiled, not matched.
 
 extern "C" {
 typedef unsigned int u32;
@@ -45,11 +47,10 @@ void FUN_023272c8(void)
 
     for (i = 0; i < 25; i++) {
         if (remaining >= 0) {
-            reverse = 24 - i;
             FUN_023314e8(large + slot * 0x400, 0x400);
-            FUN_02336c1c(large + slot * 0x400, reverse * 0x400, 0x400);
+            FUN_02336c1c(large + slot * 0x400, (24 - i) * 0x400, 0x400);
             FUN_023314e8(small + slot * 0x40, 0x40);
-            FUN_02336ac8(small + slot * 0x40, reverse * 0x40, 0x40);
+            FUN_02336ac8(small + slot * 0x40, (24 - i) * 0x40, 0x40);
         } else {
             reverse = 24 - i;
             char *p = (char *)FUN_023366e8();
