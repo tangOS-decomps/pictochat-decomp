@@ -1,14 +1,28 @@
 //cpp
-// NONMATCHING: PR validator reports 2 differing words at its authoritative merge target (div=2). Logic retained as a draft; not byte-exact there.
-// Counts as decompiled, not matched.
 // decomp: module=unk_autoload_0 addr=0x02329b2c name=FUN_02329b2c
-// Candidate reconstructed from the complete getter before the next Thumb entry.
-
-#pragma thumb on
 extern "C" {
-extern unsigned char G_023bd60c[];
+extern char G_023bd5e0[];
+extern int FUN_0232996c(void);
+extern void FUN_02329bf0(int a);
+extern int FUN_0232cae8(void *p);
+extern void FUN_02329bd8(int a);
 
-unsigned char FUN_02329b2c(void) {
-    return G_023bd60c[2];
+void FUN_02329b2c(void *p, int flag) {
+    if (*(int *)(G_023bd5e0 + 0x10) != 0) {
+        return;
+    }
+    if (flag != 0) {
+        FUN_02329bf0(2);
+    } else if (FUN_0232996c() >= 0xc) {
+        return;
+    }
+    {
+        int r = FUN_0232cae8(p);
+        *(int *)(G_023bd5e0 + 0x10) = 1;
+        if (r != 2) {
+            FUN_02329bd8(0xc);
+            *(int *)(G_023bd5e0 + 0x10) = 0;
+        }
+    }
 }
 }
